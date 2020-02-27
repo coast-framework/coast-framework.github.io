@@ -1,4 +1,81 @@
-<h1 id="user-content-upgrading-from-eta">Upgrading from eta</h1><ul><li><a href='#user-content-getting-started'>Getting Started</a></li><li><a href='#user-content-migrations'>Migrations</a></li><li><a href='#user-content-schema'>Schema</a></li><li><a href='#user-content-querying'>Querying</a></li><li><a href='#user-content-exception-handling'>Exception Handling</a></li><li><a href='#user-content-routing'>Routing</a></li><li><a href='#user-content-views'>Views</a></li><li><a href='#user-content-environment'>Environment</a></li></ul><p>The <strong>theta</strong> release contains a number of bug fixes and API improvements to keep the code base simple.</p><h2 id="user-content-getting-started">Getting Started</h2><p>The first step to upgrade from <code>eta</code> to <code>theta</code> is to update coast itself and add your database driver to <code>deps.edn</code></p><pre><code class="clojure">; deps.edn
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <title>Coast on Clojure</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link href="/favicon.png" rel="icon" type="image/png">
+    <link rel="stylesheet" href="/bundle--6885699.css" />
+  </head>
+  <body>
+    <nav class="dt w-100 border-box pa3 ph5-ns">
+       <a class="dtc v-mid near-black link dim w-25" href="/" title="Home">
+         <img alt="Coast on Clojure" class="dib w2 h2 br-100" src="/favicon.png">
+         <span class="ml2 v-top mt2 dib near-black">Coast</span>
+       </a>
+       <div class="dtc v-mid w-75 tr">
+         <a class="link dim near-black f6 f5-ns dib mr3 mr4-ns" href="/docs" title="Docs">Docs</a>
+         <a class="link dim near-black f6 f5-ns dib mr3 mr4-ns" href="https://twitter.com/coastonclojure" title="Twitter">Twitter</a>
+         <a class="link dim near-black f6 f5-ns dib" href="https://github.com/coast-framework/coast" title="Github">Github</a>
+       </div>
+    </nav>
+    <div class="grid bg-nearest-white">
+      <div class="pa4 bg-nearest-white sidebar-container">
+         <div class="fr-l sidebar">
+            <h3 id="user-content-preface">Preface</h3>
+            <ul>
+               <li><a href="/docs/about">About</a></li>
+               <li><a href="/docs/credits">Credits</a></li>
+               <li><a href="/docs/upgrading">Upgrading from eta</a></li>
+               <li><a href="/docs/contribution">Contribution Guide</a></li>
+            </ul>
+            <h3 id="user-content-concept">Concept</h3>
+            <ul>
+               <li><a href="/docs/request-lifecycle">Request Lifecycle</a></li>
+            </ul>
+            <h3 id="user-content-getting-started">Getting Started</h3>
+            <ul>
+               <li><a href="/docs/installation" style="color: rgb(53, 126, 221);">Installation</a></li>
+               <li><a href="/docs/configuration">Configuration</a></li>
+               <li><a href="/docs/directory-structure">Directory Structure</a></li>
+            </ul>
+            <h3 id="user-content-database">Database</h3>
+            <ul>
+               <li><a href="/docs/database-getting-started">Getting Started</a></li>
+               <li><a href="/docs/queries">Queries</a></li>
+               <li><a href="/docs/migrations">Migrations</a></li>
+               <li><a href="/docs/relationships">Relationships</a></li>
+               <li><a href="/docs/pull">Pull</a></li>
+            </ul>
+            <h3 id="user-content-basics">Basics</h3>
+            <ul>
+               <li><a href="/docs/routing">Routing</a></li>
+               <li><a href="/docs/middleware">Middleware</a></li>
+               <li><a href="/docs/handlers">Handlers</a></li>
+               <li><a href="/docs/request">Request</a></li>
+               <li><a href="/docs/response">Response</a></li>
+               <li><a href="/docs/views">Views</a></li>
+               <li><a href="/docs/sessions">Sessions</a></li>
+               <li><a href="/docs/validator">Validator</a></li>
+               <li><a href="/docs/error-handling">Error Handling</a></li>
+               <li><a href="/docs/logger">Logger</a></li>
+            </ul>
+            <h3 id="user-content-security">Security</h3>
+            <ul>
+               <li><a href="/docs/security-intro">Introduction</a></li>
+               <li><a href="/docs/authentication">Authentication</a></li>
+               <li><a href="/docs/csrf-protection">CSRF Protection</a></li>
+               <li><a href="/docs/password-hashing">Password Hashing</a></li>
+               <li><a href="/docs/security-outro">XSS, Sniffing, XFrame</a></li>
+            </ul>
+            <h3 id="user-content-miscellaneous">Miscellaneous</h3>
+            <ul>
+               <li><a href="/docs/older-versions">Older Versions</a></li>
+            </ul>
+         </div>
+      </div>
+      <div class="ph4 bg-white content">
+        <h1 id="user-content-upgrading-from-eta">Upgrading from eta</h1><ul><li><a href='#user-content-getting-started'>Getting Started</a></li><li><a href='#user-content-migrations'>Migrations</a></li><li><a href='#user-content-schema'>Schema</a></li><li><a href='#user-content-querying'>Querying</a></li><li><a href='#user-content-exception-handling'>Exception Handling</a></li><li><a href='#user-content-routing'>Routing</a></li><li><a href='#user-content-views'>Views</a></li><li><a href='#user-content-environment'>Environment</a></li></ul><p>The <strong>theta</strong> release contains a number of bug fixes and API improvements to keep the code base simple.</p><h2 id="user-content-getting-started">Getting Started</h2><p>The first step to upgrade from <code>eta</code> to <code>theta</code> is to update coast itself and add your database driver to <code>deps.edn</code></p><pre><code class="clojure">; deps.edn
 {:deps {coast-framework/coast.theta {:mvn/version &quot;1.0.0&quot;}
         org.postgresql/postgresql {:mvn/version &quot;42.2.5&quot;}
        ; or for sqlite
@@ -137,3 +214,9 @@
 &#40;defn edit &#91;request&#93;
   &#40;coast/form-for ::change {:author/id 1}&#41;&#41;
 </code></pre><p>This is a combination of <code>coast/form</code> and <code>action-for</code>.</p><h2 id="user-content-environment">Environment</h2><p>While <code>.env</code> continues to work, there's now another option when it comes to configuring the app's envrionment: <code>env.edn</code>.</p><p>This is similar to .env except instead of <code>key=value</code> it's just <code>edn</code> and this can be checked in to the repo since the database configuration is now separate in <code>db.edn</code> and uses the <code>env</code> variables in production by default.</p><p>Just remember to change the session key and set the database values in the environment in production!</p><p>That's it for the major changes in Coast.</p>
+      </div>
+    </div>
+    <script type="text/javascript" src="/bundle-716460080.js"></script>
+    <script>hljs.initHighlightingOnLoad();</script>
+  </body>
+</html>

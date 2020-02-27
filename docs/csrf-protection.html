@@ -1,4 +1,81 @@
-<h1 id="user-content-csrf-protection">CSRF Protection</h1><ul><li><a href='#user-content-how-it-works'>How it works</a></li><li><a href='#user-content-components'>Components</a></li></ul><p>Cross-Site Request Forgery (CSRF) allows an attacker to perform actions on behalf of another person without their knowledge or permission.</p><p>Coast protects your application from CSRF attacks by denying unidentified requests. HTTP requests with <em>POST, PUT and DELETE</em> methods are checked to make sure that the right people from the right place invoke these requests.</p><h2 id="user-content-how-it-works">How It Works</h2><ol><li>Coast creates a <em>CSRF secret</em> for each request on your site.</li><li>A corresponding token for the secret is generated for each request and passed to all <code>form</code> and <code>form-for</code> functions in the <code>csrf</code> and <code>&#42;anti-forgery-token&#42;</code> bindings</li><li>Whenever a <em>POST</em>, <em>PUT</em> or <em>DELETE</em> request is made, the middleware verifies the token with the secret to make sure it is valid.</li></ol><h2 id="user-content-components">Components</h2><p>Coast makes three components available for easy CSRF integration</p><p>A hidden input with the csrf token:</p><h4 id="user-content-<code>csrf</code>"><code>csrf</code></h4><pre><code class="clojure">&#40;ns some-ns
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <title>Coast on Clojure</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link href="/favicon.png" rel="icon" type="image/png">
+    <link rel="stylesheet" href="/bundle--6885699.css" />
+  </head>
+  <body>
+    <nav class="dt w-100 border-box pa3 ph5-ns">
+       <a class="dtc v-mid near-black link dim w-25" href="/" title="Home">
+         <img alt="Coast on Clojure" class="dib w2 h2 br-100" src="/favicon.png">
+         <span class="ml2 v-top mt2 dib near-black">Coast</span>
+       </a>
+       <div class="dtc v-mid w-75 tr">
+         <a class="link dim near-black f6 f5-ns dib mr3 mr4-ns" href="/docs" title="Docs">Docs</a>
+         <a class="link dim near-black f6 f5-ns dib mr3 mr4-ns" href="https://twitter.com/coastonclojure" title="Twitter">Twitter</a>
+         <a class="link dim near-black f6 f5-ns dib" href="https://github.com/coast-framework/coast" title="Github">Github</a>
+       </div>
+    </nav>
+    <div class="grid bg-nearest-white">
+      <div class="pa4 bg-nearest-white sidebar-container">
+         <div class="fr-l sidebar">
+            <h3 id="user-content-preface">Preface</h3>
+            <ul>
+               <li><a href="/docs/about">About</a></li>
+               <li><a href="/docs/credits">Credits</a></li>
+               <li><a href="/docs/upgrading">Upgrading from eta</a></li>
+               <li><a href="/docs/contribution">Contribution Guide</a></li>
+            </ul>
+            <h3 id="user-content-concept">Concept</h3>
+            <ul>
+               <li><a href="/docs/request-lifecycle">Request Lifecycle</a></li>
+            </ul>
+            <h3 id="user-content-getting-started">Getting Started</h3>
+            <ul>
+               <li><a href="/docs/installation" style="color: rgb(53, 126, 221);">Installation</a></li>
+               <li><a href="/docs/configuration">Configuration</a></li>
+               <li><a href="/docs/directory-structure">Directory Structure</a></li>
+            </ul>
+            <h3 id="user-content-database">Database</h3>
+            <ul>
+               <li><a href="/docs/database-getting-started">Getting Started</a></li>
+               <li><a href="/docs/queries">Queries</a></li>
+               <li><a href="/docs/migrations">Migrations</a></li>
+               <li><a href="/docs/relationships">Relationships</a></li>
+               <li><a href="/docs/pull">Pull</a></li>
+            </ul>
+            <h3 id="user-content-basics">Basics</h3>
+            <ul>
+               <li><a href="/docs/routing">Routing</a></li>
+               <li><a href="/docs/middleware">Middleware</a></li>
+               <li><a href="/docs/handlers">Handlers</a></li>
+               <li><a href="/docs/request">Request</a></li>
+               <li><a href="/docs/response">Response</a></li>
+               <li><a href="/docs/views">Views</a></li>
+               <li><a href="/docs/sessions">Sessions</a></li>
+               <li><a href="/docs/validator">Validator</a></li>
+               <li><a href="/docs/error-handling">Error Handling</a></li>
+               <li><a href="/docs/logger">Logger</a></li>
+            </ul>
+            <h3 id="user-content-security">Security</h3>
+            <ul>
+               <li><a href="/docs/security-intro">Introduction</a></li>
+               <li><a href="/docs/authentication">Authentication</a></li>
+               <li><a href="/docs/csrf-protection">CSRF Protection</a></li>
+               <li><a href="/docs/password-hashing">Password Hashing</a></li>
+               <li><a href="/docs/security-outro">XSS, Sniffing, XFrame</a></li>
+            </ul>
+            <h3 id="user-content-miscellaneous">Miscellaneous</h3>
+            <ul>
+               <li><a href="/docs/older-versions">Older Versions</a></li>
+            </ul>
+         </div>
+      </div>
+      <div class="ph4 bg-white content">
+        <h1 id="user-content-csrf-protection">CSRF Protection</h1><ul><li><a href='#user-content-how-it-works'>How it works</a></li><li><a href='#user-content-components'>Components</a></li></ul><p>Cross-Site Request Forgery (CSRF) allows an attacker to perform actions on behalf of another person without their knowledge or permission.</p><p>Coast protects your application from CSRF attacks by denying unidentified requests. HTTP requests with <em>POST, PUT and DELETE</em> methods are checked to make sure that the right people from the right place invoke these requests.</p><h2 id="user-content-how-it-works">How It Works</h2><ol><li>Coast creates a <em>CSRF secret</em> for each request on your site.</li><li>A corresponding token for the secret is generated for each request and passed to all <code>form</code> and <code>form-for</code> functions in the <code>csrf</code> and <code>&#42;anti-forgery-token&#42;</code> bindings</li><li>Whenever a <em>POST</em>, <em>PUT</em> or <em>DELETE</em> request is made, the middleware verifies the token with the secret to make sure it is valid.</li></ol><h2 id="user-content-components">Components</h2><p>Coast makes three components available for easy CSRF integration</p><p>A hidden input with the csrf token:</p><h4 id="user-content-<code>csrf</code>"><code>csrf</code></h4><pre><code class="clojure">&#40;ns some-ns
   &#40;:require &#91;coast&#93;&#41;&#41;
 
 &#91;:form {:action &quot;/&quot; :method :post}
@@ -17,3 +94,9 @@
 &#40;coast/form-for :customer/change {:customer/id 123}&#41;
   ; ... inputs go here
 </code></pre><p>Coast was designed to ensure you don't have to think about low-level details of web applications like CSRF protection but it's always nice to know what's going on under the hood.</p>
+      </div>
+    </div>
+    <script type="text/javascript" src="/bundle-716460080.js"></script>
+    <script>hljs.initHighlightingOnLoad();</script>
+  </body>
+</html>

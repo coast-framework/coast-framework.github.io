@@ -1,4 +1,81 @@
-<h1 id="user-content-directory-structure">Directory Structure</h1><ul><li><a href='#user-content-directory-structure'>Directory Structure</a></li></ul><p>The Coast directory structure may feel overwhelming at first glance since there are a handful of pre-configured directories.</p><p>Eventually, you'll understand what is there because of clojure, java or coast itself, but in the mean time it's a decent way to structure web apps with tools.deps</p><p>A standard Coast installation looks something like so:<pre><code class="bash">.
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <title>Coast on Clojure</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link href="/favicon.png" rel="icon" type="image/png">
+    <link rel="stylesheet" href="/bundle--6885699.css" />
+  </head>
+  <body>
+    <nav class="dt w-100 border-box pa3 ph5-ns">
+       <a class="dtc v-mid near-black link dim w-25" href="/" title="Home">
+         <img alt="Coast on Clojure" class="dib w2 h2 br-100" src="/favicon.png">
+         <span class="ml2 v-top mt2 dib near-black">Coast</span>
+       </a>
+       <div class="dtc v-mid w-75 tr">
+         <a class="link dim near-black f6 f5-ns dib mr3 mr4-ns" href="/docs" title="Docs">Docs</a>
+         <a class="link dim near-black f6 f5-ns dib mr3 mr4-ns" href="https://twitter.com/coastonclojure" title="Twitter">Twitter</a>
+         <a class="link dim near-black f6 f5-ns dib" href="https://github.com/coast-framework/coast" title="Github">Github</a>
+       </div>
+    </nav>
+    <div class="grid bg-nearest-white">
+      <div class="pa4 bg-nearest-white sidebar-container">
+         <div class="fr-l sidebar">
+            <h3 id="user-content-preface">Preface</h3>
+            <ul>
+               <li><a href="/docs/about">About</a></li>
+               <li><a href="/docs/credits">Credits</a></li>
+               <li><a href="/docs/upgrading">Upgrading from eta</a></li>
+               <li><a href="/docs/contribution">Contribution Guide</a></li>
+            </ul>
+            <h3 id="user-content-concept">Concept</h3>
+            <ul>
+               <li><a href="/docs/request-lifecycle">Request Lifecycle</a></li>
+            </ul>
+            <h3 id="user-content-getting-started">Getting Started</h3>
+            <ul>
+               <li><a href="/docs/installation" style="color: rgb(53, 126, 221);">Installation</a></li>
+               <li><a href="/docs/configuration">Configuration</a></li>
+               <li><a href="/docs/directory-structure">Directory Structure</a></li>
+            </ul>
+            <h3 id="user-content-database">Database</h3>
+            <ul>
+               <li><a href="/docs/database-getting-started">Getting Started</a></li>
+               <li><a href="/docs/queries">Queries</a></li>
+               <li><a href="/docs/migrations">Migrations</a></li>
+               <li><a href="/docs/relationships">Relationships</a></li>
+               <li><a href="/docs/pull">Pull</a></li>
+            </ul>
+            <h3 id="user-content-basics">Basics</h3>
+            <ul>
+               <li><a href="/docs/routing">Routing</a></li>
+               <li><a href="/docs/middleware">Middleware</a></li>
+               <li><a href="/docs/handlers">Handlers</a></li>
+               <li><a href="/docs/request">Request</a></li>
+               <li><a href="/docs/response">Response</a></li>
+               <li><a href="/docs/views">Views</a></li>
+               <li><a href="/docs/sessions">Sessions</a></li>
+               <li><a href="/docs/validator">Validator</a></li>
+               <li><a href="/docs/error-handling">Error Handling</a></li>
+               <li><a href="/docs/logger">Logger</a></li>
+            </ul>
+            <h3 id="user-content-security">Security</h3>
+            <ul>
+               <li><a href="/docs/security-intro">Introduction</a></li>
+               <li><a href="/docs/authentication">Authentication</a></li>
+               <li><a href="/docs/csrf-protection">CSRF Protection</a></li>
+               <li><a href="/docs/password-hashing">Password Hashing</a></li>
+               <li><a href="/docs/security-outro">XSS, Sniffing, XFrame</a></li>
+            </ul>
+            <h3 id="user-content-miscellaneous">Miscellaneous</h3>
+            <ul>
+               <li><a href="/docs/older-versions">Older Versions</a></li>
+            </ul>
+         </div>
+      </div>
+      <div class="ph4 bg-white content">
+        <h1 id="user-content-directory-structure">Directory Structure</h1><ul><li><a href='#user-content-directory-structure'>Directory Structure</a></li></ul><p>The Coast directory structure may feel overwhelming at first glance since there are a handful of pre-configured directories.</p><p>Eventually, you'll understand what is there because of clojure, java or coast itself, but in the mean time it's a decent way to structure web apps with tools.deps</p><p>A standard Coast installation looks something like so:<pre><code class="bash">.
 ├── Makefile
 ├── README.md
 ├── bin
@@ -26,3 +103,9 @@
 </code></pre></p><h2 id="user-content-root-directories">Root Directories</h2><h3 id="user-content-bin">bin</h3><p>The <code>bin</code> directory is the home of the <a href='https://github.com/nrepl/nrepl'>nREPL</a> server.</p><h3 id="user-content-db">db</h3><p>The <code>db</code> directory is used to store all database related files.</p><h3 id="user-content-resources">resources</h3><p>The <code>resources</code> directory is used to serve static assets over HTTP.</p><p>This directory is mapped to the root of your website:</p><pre><code class="clojure">; actual file is stored in /resources/css/app.css
 &#91;:link {:rel &quot;stylesheet&quot; :href &quot;/app.css&quot;}&#93;
 </code></pre><h3 id="user-content-src">src</h3><p>The <code>src</code> directory is used to store <code>components</code> (re-usable bits of html), and your application code, one file for each set of routes.</p><h3 id="user-content-test">test</h3><p>The <code>test</code> directory is used to store all your application tests.</p>
+      </div>
+    </div>
+    <script type="text/javascript" src="/bundle-716460080.js"></script>
+    <script>hljs.initHighlightingOnLoad();</script>
+  </body>
+</html>

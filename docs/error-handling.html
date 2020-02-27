@@ -1,4 +1,81 @@
-<h1 id="user-content-handling-errors">Handling Errors</h1><ul><li><a href='#user-content-introduction'>Introduction</a></li><li><a href='#user-content-handling-errors'>Handling Errors</a></li><li><a href='#user-content-custom-errors'>Custom Errors</a></li></ul><p>Coast attempts to make clojure exceptions a little nicer by offering two functions: <code>raise</code> and <code>rescue</code></p><p>In this guide, we learn how clojure exceptions are raised, how to write logic around them and finally creating your own custom exceptions.</p><h2 id="user-content-introduction">Introduction</h2><p>Exceptions are great since they halt the program at a certain stage and make sure everything is correct before proceeding.</p><p>Exceptions, especially in clojure, are usually just treated as insane, indecipherable walls of text that tell devs that <em>something</em> went wrong, go dive in and find it.</p><p>By default, Coast handles all exceptions for you and displays them in a nice format during development. However, you are free to handle exceptions however you want.</p><h2 id="user-content-handling-errors">Handling Errors</h2><p>Errors can be handled by catching all of them or specifying a name</p><h3 id="user-content-gotta-catch-'em-all">Gotta Catch 'Em All</h3><p>Here's how <code>raise</code> works with one argument</p><pre><code class="clojure">&#40;raise {:message &quot;This is an error with a message key&quot;}&#41;
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <title>Coast on Clojure</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link href="/favicon.png" rel="icon" type="image/png">
+    <link rel="stylesheet" href="/bundle--6885699.css" />
+  </head>
+  <body>
+    <nav class="dt w-100 border-box pa3 ph5-ns">
+       <a class="dtc v-mid near-black link dim w-25" href="/" title="Home">
+         <img alt="Coast on Clojure" class="dib w2 h2 br-100" src="/favicon.png">
+         <span class="ml2 v-top mt2 dib near-black">Coast</span>
+       </a>
+       <div class="dtc v-mid w-75 tr">
+         <a class="link dim near-black f6 f5-ns dib mr3 mr4-ns" href="/docs" title="Docs">Docs</a>
+         <a class="link dim near-black f6 f5-ns dib mr3 mr4-ns" href="https://twitter.com/coastonclojure" title="Twitter">Twitter</a>
+         <a class="link dim near-black f6 f5-ns dib" href="https://github.com/coast-framework/coast" title="Github">Github</a>
+       </div>
+    </nav>
+    <div class="grid bg-nearest-white">
+      <div class="pa4 bg-nearest-white sidebar-container">
+         <div class="fr-l sidebar">
+            <h3 id="user-content-preface">Preface</h3>
+            <ul>
+               <li><a href="/docs/about">About</a></li>
+               <li><a href="/docs/credits">Credits</a></li>
+               <li><a href="/docs/upgrading">Upgrading from eta</a></li>
+               <li><a href="/docs/contribution">Contribution Guide</a></li>
+            </ul>
+            <h3 id="user-content-concept">Concept</h3>
+            <ul>
+               <li><a href="/docs/request-lifecycle">Request Lifecycle</a></li>
+            </ul>
+            <h3 id="user-content-getting-started">Getting Started</h3>
+            <ul>
+               <li><a href="/docs/installation" style="color: rgb(53, 126, 221);">Installation</a></li>
+               <li><a href="/docs/configuration">Configuration</a></li>
+               <li><a href="/docs/directory-structure">Directory Structure</a></li>
+            </ul>
+            <h3 id="user-content-database">Database</h3>
+            <ul>
+               <li><a href="/docs/database-getting-started">Getting Started</a></li>
+               <li><a href="/docs/queries">Queries</a></li>
+               <li><a href="/docs/migrations">Migrations</a></li>
+               <li><a href="/docs/relationships">Relationships</a></li>
+               <li><a href="/docs/pull">Pull</a></li>
+            </ul>
+            <h3 id="user-content-basics">Basics</h3>
+            <ul>
+               <li><a href="/docs/routing">Routing</a></li>
+               <li><a href="/docs/middleware">Middleware</a></li>
+               <li><a href="/docs/handlers">Handlers</a></li>
+               <li><a href="/docs/request">Request</a></li>
+               <li><a href="/docs/response">Response</a></li>
+               <li><a href="/docs/views">Views</a></li>
+               <li><a href="/docs/sessions">Sessions</a></li>
+               <li><a href="/docs/validator">Validator</a></li>
+               <li><a href="/docs/error-handling">Error Handling</a></li>
+               <li><a href="/docs/logger">Logger</a></li>
+            </ul>
+            <h3 id="user-content-security">Security</h3>
+            <ul>
+               <li><a href="/docs/security-intro">Introduction</a></li>
+               <li><a href="/docs/authentication">Authentication</a></li>
+               <li><a href="/docs/csrf-protection">CSRF Protection</a></li>
+               <li><a href="/docs/password-hashing">Password Hashing</a></li>
+               <li><a href="/docs/security-outro">XSS, Sniffing, XFrame</a></li>
+            </ul>
+            <h3 id="user-content-miscellaneous">Miscellaneous</h3>
+            <ul>
+               <li><a href="/docs/older-versions">Older Versions</a></li>
+            </ul>
+         </div>
+      </div>
+      <div class="ph4 bg-white content">
+        <h1 id="user-content-handling-errors">Handling Errors</h1><ul><li><a href='#user-content-introduction'>Introduction</a></li><li><a href='#user-content-handling-errors'>Handling Errors</a></li><li><a href='#user-content-custom-errors'>Custom Errors</a></li></ul><p>Coast attempts to make clojure exceptions a little nicer by offering two functions: <code>raise</code> and <code>rescue</code></p><p>In this guide, we learn how clojure exceptions are raised, how to write logic around them and finally creating your own custom exceptions.</p><h2 id="user-content-introduction">Introduction</h2><p>Exceptions are great since they halt the program at a certain stage and make sure everything is correct before proceeding.</p><p>Exceptions, especially in clojure, are usually just treated as insane, indecipherable walls of text that tell devs that <em>something</em> went wrong, go dive in and find it.</p><p>By default, Coast handles all exceptions for you and displays them in a nice format during development. However, you are free to handle exceptions however you want.</p><h2 id="user-content-handling-errors">Handling Errors</h2><p>Errors can be handled by catching all of them or specifying a name</p><h3 id="user-content-gotta-catch-'em-all">Gotta Catch 'Em All</h3><p>Here's how <code>raise</code> works with one argument</p><pre><code class="clojure">&#40;raise {:message &quot;This is an error with a message key&quot;}&#41;
 </code></pre><p>That raises a <code>clojure.lang.ExceptionInfo</code> exception with <code>ex-data</code>: <code>{:message &quot;This is an error with a message key&quot;}</code></p><p>You can <code>rescue</code> from this instead of using <code>try</code> and <code>catch</code> like this:</p><pre><code class="clojure">&#40;let &#91;&#91;&#95; error&#93; &#40;rescue
                   &#40;raise {:message &quot;This is an error&quot;}&#41;&#41;&#93;&#41;
 </code></pre><p>The error variable in the above example now contains <code>{:message &quot;This is an error&quot;}</code></p><p>So <code>rescue</code> is a macro, which wraps the body in <code>try</code> and <code>catch</code> and catches any <code>ExceptionInfo</code> that comes from <code>raise</code></p><h3 id="user-content-named-errors">Named Errors</h3><p>You can rescue individual errors as well</p><pre><code class="clojure">&#40;rescue
@@ -7,3 +84,9 @@
   :custom&#41;
 </code></pre><p>In the above example, the first error will be caught, the second one will not.</p><h2 id="user-content-custom-errors">Custom Errors</h2><p><code>raise</code> can also change the "Error has occurred" message as well like this:</p><pre><code class="clojure">&#40;raise &quot;This is a custom error title&quot; {}&#41;
 </code></pre>
+      </div>
+    </div>
+    <script type="text/javascript" src="/bundle-716460080.js"></script>
+    <script>hljs.initHighlightingOnLoad();</script>
+  </body>
+</html>

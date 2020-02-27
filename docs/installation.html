@@ -1,7 +1,90 @@
-<h1 id="user-content-installation">Installation</h1><ul><li><a href='#user-content-system-requirements'>System Requirements</a></li><li><a href='#user-content-installing-coast'>Installing Coast</a></li><li><a href='#user-content-serving-the-application'>Serving the Application</a></li></ul><p>Installing Coast is a simple process and will only take a few minutes.</p><h2 id="user-content-system-requirements">System Requirements</h2><p>The only dependencies of the framework are <code>java</code> and <code>clojure</code>.</p><p>Ensure your versions of those tools match the following criteria:</p><ul><li>clojure >= 1.8.0</li><li>java >= 9</li></ul><p class="tip">TIP: You can use tools like <a href='https://github.com/shyiko/jabba'>jabba</a> to help manage multiple versions of java at the same time.</p><h2 id="user-content-installing-coast">Installing Coast</h2><h3 id="user-content-from-coast-cli">From Coast CLI</h3><p>Coast CLI is a command line tool to help you install Coast.</p><p>Install it globally via <code>curl</code> like so:</p><pre><code class="bash">curl -o /usr/local/bin/coast https://raw.githubusercontent.com/coast-framework/coast/master/coast &amp;&amp; chmod a+x /usr/local/bin/coast
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <title>Coast on Clojure</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link href="/favicon.png" rel="icon" type="image/png">
+    <link rel="stylesheet" href="/bundle--6885699.css" />
+  </head>
+  <body>
+    <nav class="dt w-100 border-box pa3 ph5-ns">
+       <a class="dtc v-mid near-black link dim w-25" href="/" title="Home">
+         <img alt="Coast on Clojure" class="dib w2 h2 br-100" src="/favicon.png">
+         <span class="ml2 v-top mt2 dib near-black">Coast</span>
+       </a>
+       <div class="dtc v-mid w-75 tr">
+         <a class="link dim near-black f6 f5-ns dib mr3 mr4-ns" href="/docs" title="Docs">Docs</a>
+         <a class="link dim near-black f6 f5-ns dib mr3 mr4-ns" href="https://twitter.com/coastonclojure" title="Twitter">Twitter</a>
+         <a class="link dim near-black f6 f5-ns dib" href="https://github.com/coast-framework/coast" title="Github">Github</a>
+       </div>
+    </nav>
+    <div class="grid bg-nearest-white">
+      <div class="pa4 bg-nearest-white sidebar-container">
+         <div class="fr-l sidebar">
+            <h3 id="user-content-preface">Preface</h3>
+            <ul>
+               <li><a href="/docs/about">About</a></li>
+               <li><a href="/docs/credits">Credits</a></li>
+               <li><a href="/docs/upgrading">Upgrading from eta</a></li>
+               <li><a href="/docs/contribution">Contribution Guide</a></li>
+            </ul>
+            <h3 id="user-content-concept">Concept</h3>
+            <ul>
+               <li><a href="/docs/request-lifecycle">Request Lifecycle</a></li>
+            </ul>
+            <h3 id="user-content-getting-started">Getting Started</h3>
+            <ul>
+               <li><a href="/docs/installation" style="color: rgb(53, 126, 221);">Installation</a></li>
+               <li><a href="/docs/configuration">Configuration</a></li>
+               <li><a href="/docs/directory-structure">Directory Structure</a></li>
+            </ul>
+            <h3 id="user-content-database">Database</h3>
+            <ul>
+               <li><a href="/docs/database-getting-started">Getting Started</a></li>
+               <li><a href="/docs/queries">Queries</a></li>
+               <li><a href="/docs/migrations">Migrations</a></li>
+               <li><a href="/docs/relationships">Relationships</a></li>
+               <li><a href="/docs/pull">Pull</a></li>
+            </ul>
+            <h3 id="user-content-basics">Basics</h3>
+            <ul>
+               <li><a href="/docs/routing">Routing</a></li>
+               <li><a href="/docs/middleware">Middleware</a></li>
+               <li><a href="/docs/handlers">Handlers</a></li>
+               <li><a href="/docs/request">Request</a></li>
+               <li><a href="/docs/response">Response</a></li>
+               <li><a href="/docs/views">Views</a></li>
+               <li><a href="/docs/sessions">Sessions</a></li>
+               <li><a href="/docs/validator">Validator</a></li>
+               <li><a href="/docs/error-handling">Error Handling</a></li>
+               <li><a href="/docs/logger">Logger</a></li>
+            </ul>
+            <h3 id="user-content-security">Security</h3>
+            <ul>
+               <li><a href="/docs/security-intro">Introduction</a></li>
+               <li><a href="/docs/authentication">Authentication</a></li>
+               <li><a href="/docs/csrf-protection">CSRF Protection</a></li>
+               <li><a href="/docs/password-hashing">Password Hashing</a></li>
+               <li><a href="/docs/security-outro">XSS, Sniffing, XFrame</a></li>
+            </ul>
+            <h3 id="user-content-miscellaneous">Miscellaneous</h3>
+            <ul>
+               <li><a href="/docs/older-versions">Older Versions</a></li>
+            </ul>
+         </div>
+      </div>
+      <div class="ph4 bg-white content">
+        <h1 id="user-content-installation">Installation</h1><ul><li><a href='#user-content-system-requirements'>System Requirements</a></li><li><a href='#user-content-installing-coast'>Installing Coast</a></li><li><a href='#user-content-serving-the-application'>Serving the Application</a></li></ul><p>Installing Coast is a simple process and will only take a few minutes.</p><h2 id="user-content-system-requirements">System Requirements</h2><p>The only dependencies of the framework are <code>java</code> and <code>clojure</code>.</p><p>Ensure your versions of those tools match the following criteria:</p><ul><li>clojure >= 1.8.0</li><li>java >= 9</li></ul><p class="tip">TIP: You can use tools like <a href='https://github.com/shyiko/jabba'>jabba</a> to help manage multiple versions of java at the same time.</p><h2 id="user-content-installing-coast">Installing Coast</h2><h3 id="user-content-from-coast-cli">From Coast CLI</h3><p>Coast CLI is a command line tool to help you install Coast.</p><p>Install it globally via <code>curl</code> like so:</p><pre><code class="bash">curl -o /usr/local/bin/coast https://raw.githubusercontent.com/coast-framework/coast/master/coast &amp;&amp; chmod a+x /usr/local/bin/coast
 </code></pre><p>Make sure to add the <code>/usr/local/bin</code> directory to your <code>$PATH</code>.</p><p>Once installed, you can use the <code>coast new</code> command to create new Coast apps.</p><p>For example, to create a new application called <code>zero</code>, type the following into your terminal:</p><pre><code class="bash">coast new zero
 </code></pre><h2 id="user-content-serving-the-application">Serving the application</h2><h3 id="user-content-from-the-cli">From the CLI</h3><p>Once the installation process has completed, you can <code>cd</code> into your new application directory and run the following command to start the server:</p><pre><code class="bash">make server
 </code></pre><p>This command starts the server on the <code>:port</code> defined inside the <code>env.edn</code> file: <code>http://localhost:1337</code></p><h3 id="user-content-from-the-repl">From the REPL</h3><p>Or you can run <code>&#40;server/-main&#41;</code> from your REPL. The REPL server can be started from the terminal with:</p><pre><code class="bash">make repl
 </code></pre><p>Then connect to the editor from your REPL with one of these handy guides:</p><ul><li><a href='https://cursive-ide.com/userguide/repl.html'>Cursive</a></li><li><a href='https://github.com/jasongilman/proto-repl#connecting-to-a-remote-repl'>Atom With Proto-REPL</a></li><li><a href='https://github.com/BetterThanTomorrow/calva#how-to-use'>VSCode with Calva</a></li><li><a href='https://github.com/clojure-emacs/cider#connect-to-a-running-nrepl-server'>Emacs with Cider</a></li><li><a href='https://github.com/tpope/vim-fireplace'>Vim with Fireplace</a></li></ul><p>After the editor is connected to the running REPL server, add this to the bottom of the <code>server.clj</code> file:</p><pre><code class="clojure">&#40;comment
   &#40;-main&#41;&#41;
 </code></pre><p>And move your text editor's cursor over any of the letters in <code>-main</code> and press the keyboard shortcut for "sending the text under the cursor" to the REPL server. The http server will start and you can navigate to <code>http://localhost:1337</code></p>
+      </div>
+    </div>
+    <script type="text/javascript" src="/bundle-716460080.js"></script>
+    <script>hljs.initHighlightingOnLoad();</script>
+  </body>
+</html>
