@@ -13,10 +13,10 @@ title: coast on clojure
             </div>
             <div class="fl w-50-ns w-100 ph3 mt2">
                <pre><code style="padding: 20px" class="clojure hljs">(<span class="hljs-name"><span class="hljs-builtin-name">ns</span></span> server
-(<span class="hljs-symbol">:require</span> [coast]))
+  (<span class="hljs-symbol">:require</span> [coast]))
 
 (<span class="hljs-name"><span class="hljs-builtin-name">defn</span></span> home [request]
-(<span class="hljs-name">coast/ok</span> <span class="hljs-string">"You're coasting on clojure"</span>))
+  (<span class="hljs-name">coast/ok</span> <span class="hljs-string">"You're coasting on clojure"</span>))
 
 (<span class="hljs-name"><span class="hljs-builtin-name">def</span></span> routes (<span class="hljs-name">coast/routes</span> [<span class="hljs-symbol">:get</span> <span class="hljs-string">"/"</span> home]))
 
