@@ -1,0 +1,34 @@
+<h1 id="user-content-validator">Validator</h1><ul><li><a href='#user-content-validating-input'>Validating Input</a></li><li><a href='#user-content-common-rules'>Common Rules</a></li></ul><p>Coast makes it simple to validate input with the help of a validate function.</p><p>In this guide you learn how to validate data <em>manually</em>.</p><p class="note">NOTE: Coast validation uses <a href='https://github.com/jkk/verily'>verily</a> under the hood. For full usage details, see the official verily <a href='https://github.com/jkk/verily'>documentation</a>.</p><h2 id="user-content-validating-input">Validating Input</h2><p>Let's start with the example of validating input received via HTML form:</p><p>Make the routes to show the form and handle the submission:</p><pre><code class="clojure">; src/routes.clj
+
+&#40;def routes
+  &#40;coast/site
+    &#91;:get &quot;/posts/:post-id/edit&quot; :post/edit&#93;
+    &#91;:put &quot;/posts/:post-id&quot; :post/change&#93;
+    &#91;:get &quot;/posts/:post-id&quot; :post/view&#93;&#41;&#41;&#41;
+</code></pre><p>Make the handler functions to show the form</p><pre><code class="clojure">; src/customer.clj
+
+&#40;defn edit &#91;{:keys &#91;params errors&#93;}&#93;
+  &#91;:div
+    &#40;when &#40;some? errors&#41;
+      &#91;:div
+        &#91;:div &#40;:customer/email errors&#41;&#93;&#93;&#41;
+    &#40;coast/form-for ::change {:customer/id &#40;:customer/id params&#41;}
+      &#91;:input {:type &quot;text&quot; :name &quot;customer/email&quot;}&#93;
+      &#91;:button {:type &quot;submit&quot;} &quot;Submit&quot;&#93;&#41;&#93;&#41;
+</code></pre><p>...handle the form submission and use the validator to validate the data:</p><pre><code class="clojure">; src/customer.clj
+
+&#40;defn change &#91;{:keys &#91;params&#93;}&#93;
+  &#40;let &#91;&#91;&#95; errors&#93; &#40;-&gt; &#40;select-keys params &#91;:customer/id :customer/email&#93;&#41;
+                       &#40;coast/validate &#91;&#91;:email &#91;:customer/email&#93;&#93;&#93;&#41;
+                       &#40;coast/rescue&#41;&#41;&#93;
+    &#40;if &#40;nil? errors&#41;
+      &#40;coast/redirect-to ::view {:customer/id &#40;:customer/id request&#41;}&#41;
+      &#40;edit &#40;merge request errors&#41;&#41;&#41;&#41;&#41;
+</code></pre><p>Let's break down the above code into small steps:</p><ol><li>We <a href='https://clojure.org/guides/destructuring'>destructured</a> the request map into a params variable</li><li>We used the <code>validate</code> method to validate the params data against an <code>:email</code> rule</li><li>If validation fails, the form re-renders with any errors</li><li>If it succeeds, it redirects to the <code>::view</code> handler</li></ol><h2 id="user-content-common-rules">Common Rules</h2><p>Below is the list of available, built in validator rules</p><ul><li>:required <keys> [msg] - must not be absent, blank, or nil</li><li>:contains <keys> [msg] - must not be absent, but can be blank or nil</li><li>:not-blank <keys> [msg] - may be absent but not blank or nil</li><li>:exact <value> <keys> [msg] - must be a particular value</li><li>:equal <keys> [msg] - all keys must be equal</li><li>:email <keys> [msg] - must be a valid email</li><li>:url <keys> [msg] - must be a valid URL</li><li>:web-url <keys> [msg] - must be a valid website URL (http or https)</li><li>:link-url <keys> [msg] - must be a valid link URL (can be relative, http: or https: may be omitted)</li><li>:matches <regex> <keys> [msg] - must match a regular expression</li><li>:min-length <len> <keys> [msg] - must be a certain length (for strings or collections)</li><li>:max-length <len> <keys> [msg] - must not exceed a certain length (for strings or collections)</li><li>:complete <keys> [msg] - must be a collection with no blank or nil values</li><li>:min-val <min> <keys> [msg] - must be at least a certain value</li><li>:max-val <max> <keys> [msg] - must be at most a certain value</li><li>:within <min> <max> <keys> [msg] - must be within a certain range (inclusive)</li><li>:positive <keys> [msg] - must be a positive number</li><li>:negative <keys> [msg] - must be a negative number</li><li>:after <date> <keys> [msg] - must be after a certain date</li><li>:before <date> <keys> [msg] - must be before a certain date</li><li>:in <coll> <keys> [msg] - must be contained within a collection</li><li>:every-in <coll> <keys> [msg] - each value must be within a collection (for values that are themselves collections)</li><li>:us-zip <keys> [msg] - must be a valid US zip code</li><li>:luhn <keys> [msg] - must be pass the Luhn check (e.g., for credit card numbers)</li><li>Datatype validations: :string, :boolean, :integer, :float, :decimal, :date (plus aliases)</li><li>Datatype collection validations: :strings, :booleans, :integers, :floats, :decimals, :dates (plus aliases)</li></ul><h4 id="user-content-<code>&#40;validate-map-rules&#41;</code>"><code>&#40;validate map rules&#41;</code></h4><p>Validate required keys and one email key:</p><pre><code class="clojure">&#40;coast/validate {:customer/id 123
+                 :customer/email &quot;sean@example.com&quot;} &#91;&#91;:required &#91;:customer/id :customer/email&#93;&#93;
+                                                      &#91;:email &#91;:customer/email&#93;&#93;&#93;&#41;
+</code></pre><p class="note">NOTE: You can optionally pass custom error messages to return when your validation fails as the third value in each vector:</p><pre><code class="clojure">&#40;coast/validate {} &#91;&#91;:required &#91;:customer/id&#93; &quot;can't be blank&quot;&#93;
+                    &#91;:email &#91;:customer/email&#93; &quot;needs to be an actual email&quot;&#93;&#93;&#41;
+</code></pre><p>The exception that is raised from the above failed <code>&#40;coast/validate&#41;</code> validation looks like this:</p><pre><code class="clojure">{:customer/email &quot;Email needs to be an actual email&quot;
+ :customer/id &quot;Id can't be blank&quot;}
+</code></pre>

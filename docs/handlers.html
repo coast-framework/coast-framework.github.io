@@ -1,0 +1,37 @@
+<h1 id="user-content-handlers">Handlers</h1><ul><li><a href='#user-content-creating-handlers'>Creating Handlers</a></li><li><a href='#user-content-using-handlers'>Using Handlers</a></li></ul><p>Handlers are represented by routes, grouping related request handling logic into single files, and are the common point of interaction between your database, html and any other services you may need.</p><p class="note">NOTE: A handler's only job is to respond to a HTTP request.</p><h2 id="user-content-creating-handlers">Creating Handlers</h2><p>To create a new handler function files, use the <code>coast gen code</code> command:</p><pre><code class="bash">coast gen code author
+</code></pre><p>This command creates a boilerplate file in the <code>src</code> folder:</p><pre><code class="clojure">; src/author.clj
+&#40;ns author
+  &#40;:require &#91;coast&#93;&#41;&#41;
+
+
+&#40;defn index &#91;request&#93;&#41;
+&#40;defn view &#91;request&#93;&#41;
+&#40;defn build &#91;request&#93;&#41;
+&#40;defn create &#91;request&#93;&#41;
+&#40;defn edit &#91;request&#93;&#41;
+&#40;defn change &#91;request&#93;&#41;
+&#40;defn delete &#91;request&#93;&#41;
+</code></pre><h2 id="user-content-using-handlers">Using Handlers</h2><p>A handler can be accessed from a route.</p><p>This is done by referencing the handler as a <strong>keyword</strong> in your route definition:</p><pre><code class="clojure">; routes.clj
+&#91;:get &quot;/authors&quot; :author/index&#93;
+</code></pre><p>The part before the <code>/</code> is a reference to the handler file (e.g. <code>author.clj</code>).</p><p>The part after the <code>/</code> is the name of the function you want to call (e.g. <code>index</code>).</p><p>For example:</p><pre><code class="clojure">; routes.clj
+
+; src/author.clj -&gt; &#40;defn index &#91;request&#93;&#41;
+&#91;:get &quot;/authors&quot; :author/index&#93;
+
+; src/admin/dashboard.clj -&gt; &#40;defn index &#91;request&#93;&#41;
+&#91;:get &quot;/authors&quot; :admin.dashboard/index&#93;
+
+; src/a/deep/path/file.clj -&gt; &#40;defn create &#91;request&#93;&#41;
+&#91;:get &quot;/a-deep-path&quot; :a.deep.path.file/create&#93;
+</code></pre><p>As your defined handler functions are route handlers, they will receive the <a href='/docs/request-lifecycle.md'>request map</a> as an argument.</p><pre><code class="clojure">; src/author.clj
+
+&#40;ns author
+  &#40;:require &#91;coast&#93;&#41;&#41;
+
+&#40;defn index &#91;request&#93;
+  &#40;let &#91;params &#40;:params request&#41;
+        session &#40;:session request&#41;
+        errors &#40;:errors request&#41;&#93;
+    ; code generating a response goes here
+  &#41;&#41;
+</code></pre>

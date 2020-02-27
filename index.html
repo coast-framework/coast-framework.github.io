@@ -1,0 +1,56 @@
+<!--
+title: coast on clojure
+-->
+
+<div>
+   <div class="pv6-ns pv4">
+      <div class="mw8 center">
+         <div class="cf">
+            <div class="fl w-50-ns w-100 near-black ph3">
+               <h1 class="f2 f1-l fw3 lh-title">The Fullest Full Stack Clojure Web Framework</h1>
+               <p class="lh-copy measure">Coast is a complete web application framework for developing web apps in less time and more fun</p>
+               <a class="dn dib-ns no-underline br2 shadow-4 grow v-mid bg-green white ba b--green ph4 pv3 mb3 br1 mt3" href="/docs">Get Started with Coast</a>
+            </div>
+            <div class="fl w-50-ns w-100 ph3 mt2">
+               <pre><code style="padding: 20px" class="clojure hljs">(<span class="hljs-name"><span class="hljs-builtin-name">ns</span></span> server
+(<span class="hljs-symbol">:require</span> [coast]))
+
+(<span class="hljs-name"><span class="hljs-builtin-name">defn</span></span> home [request]
+(<span class="hljs-name">coast/ok</span> <span class="hljs-string">"You're coasting on clojure"</span>))
+
+(<span class="hljs-name"><span class="hljs-builtin-name">def</span></span> routes (<span class="hljs-name">coast/routes</span> [<span class="hljs-symbol">:get</span> <span class="hljs-string">"/"</span> home]))
+
+(<span class="hljs-name"><span class="hljs-builtin-name">def</span></span> app (<span class="hljs-name">coast/app</span> {<span class="hljs-symbol">:routes</span> routes}))
+
+(<span class="hljs-name">coast/server</span> app {<span class="hljs-symbol">:port</span> <span class="hljs-number">1337</span>})</code></pre>
+               <a class="dn-ns dib no-underline br2 shadow-4 grow v-mid bg-green white ba b--green ph4 pv3 mb3 br1 mt3" href="/docs">Get Started with Coast</a>
+            </div>
+         </div>
+      </div>
+   </div>
+   <div class="pv6 hero-topo-bg white">
+      <div class="tc-l ph3">
+         <h2 class="f2 f1-l fw3 mb0 lh-title mb4">The missing clojure web framework</h2>
+         <p class="lh-copy measure center-l">Making a modern web app can be crazy. Between tracking down up-to-date, secure dependencies and your own application code, things can get out of control quickly.
+            Coast on Clojure makes it much easier and more fun.
+            It includes everything you need to make great web applications.
+         </p>
+      </div>
+   </div>
+   <div class="pv6-ns pv4">
+      <div class="cf mw8 center near-black">
+         <div class="fl w-100 w-third-ns ph4">
+            <h3 class="f3 f2-l fw3 mb0 lh-title">⚡️ Fast</h3>
+            <p class="lh-copy measure">Coast was made to take your ideas from thought to completion to as fast as possible</p>
+         </div>
+         <div class="fl w-100 w-third-ns ph4">
+            <h3 class="f3 f2-l fw3 mb0 lh-title">👮‍♂️ Secure</h3>
+            <p class="lh-copy measure">Coast takes security seriously and helps you avoid many common security mistakes</p>
+         </div>
+         <div class="fl w-100 w-third-ns ph4">
+            <h3 class="f3 f2-l fw3 mb0 lh-title">🎉 Fun</h3>
+            <p class="lh-copy measure">Make web development fun again with consistent syntax and lightning fast feedback via the REPL</p>
+         </div>
+      </div>
+   </div>
+</div>

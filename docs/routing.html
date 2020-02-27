@@ -1,0 +1,153 @@
+<h1 id="user-content-routing">Routing</h1><ul><li><a href='#user-content-basic-routing'>Basic Routing</a></li><li><a href='#user-content-route-parameters'>Route Parameters</a></li><li><a href='#user-content-named-route'>Named Route</a></li><li><a href='#user-content-route-responses'>Route Responses</a></li><li><a href='#user-content-route-resources'>Route Resources</a></li><li><a href='#user-content-route-prefixes'>Route Prefixes</a></li></ul><p>Routes enable the outside world to interact with your app via URLs.</p><p>Routes are defined inside of the <code>src/routes.clj</code> file.</p><h2 id="user-content-basic-routing">Basic Routing</h2><p>The most basic route definition requires an http method, a url and a "pointer" to a function:</p><pre><code class="clojure">; src/routes.clj
+&#40;ns routes
+  &#40;:require &#91;coast&#93;&#41;&#41;
+
+&#40;defn home &#91;request&#93;&#41;
+  {:status 200 :body &quot;hello world!&quot; :headers {&quot;content-type&quot; &quot;text/html&quot;}}
+
+&#40;def routes
+  &#40;coast/site
+    &#91;:get &quot;/&quot; ::home&#93;&#41;&#41;
+</code></pre><p>The return value of the function will be sent back to the client as a response.</p><p>You'll mostly be "binding" a route to a function using a <code>:namespace/function</code> signature:</p><pre><code class="clojure">&#91;:get &quot;/&quot; :post/index&#93;
+</code></pre><p>The above keyword <code>:post/index</code> refers to the <code>src/post.clj</code> file's <code>index</code> function.</p><h3 id="user-content-available-router-methods">Available Router Methods</h3><p>Resourceful routes use different HTTP verbs to indicate the type of request:</p><pre><code class="clojure">&#91;:get url :qualified/keyword&#93;
+&#91;:post url :qualified/keyword&#93;
+&#91;:put url :qualified/keyword&#93;
+&#91;:patch url :qualified/keyword&#93;
+&#91;:delete url :qualified/keyword&#93;
+</code></pre><h2 id="user-content-route-parameters">Route Parameters</h2><p>Route parameters are defined like so:</p><pre><code class="clojure">&#40;defn view &#91;{:keys &#91;params&#93;}&#93;&#41;
+  {:status 200
+   :body &#40;str &quot;post &quot; &#40;:id params&#41;&#41;}
+
+&#91;:get &quot;/posts/:id&quot; ::view&#93;
+</code></pre><p>In the example above, <code>:id</code> is a route parameter.</p><p>Its value is then retrieved via the <code>:params</code> keyword.</p><h2 id="user-content-named-route">Named Route</h2><p>Though routes are defined inside the <code>src/routes.clj</code> file, they are referenced everywhere else in the application (e.g. using the <code>url-for</code> route helper to make a URL for a given route).</p><p>By using the last element of the vector, you can assign your route a unique name:</p><pre><code class="clojure">&#91;:get &quot;/posts&quot; :post/index :posts&#93;
+</code></pre><p>This will enable you to use <code>route</code> helpers in your code, like so:</p><pre><code class="clojure">; before
+&#91;:a {:href &quot;/posts&quot;} &quot;List of posts&quot;&#93;
+
+; after
+&#91;:a {:href &#40;url-for :posts&#41;} &quot;List of posts&quot;&#93;
+
+; you can also call the original name of the function as well
+&#91;:a {:href &#40;url-for :post/index&#41;} &quot;List of posts&quot;&#93;
+</code></pre><pre><code class="clojure">; src/post.clj
+&#40;ns post
+  &#40;:require &#91;coast&#93;&#41;&#41;
+
+&#40;defn index &#91;request&#93;
+  &#40;coast/redirect-to :posts&#41;&#41;
+
+; or more verbose
+
+&#40;defn index &#91;request&#93;
+  &#40;coast/redirect &#40;coast/url-for :posts&#41;&#41;
+</code></pre><p>Both <code>route</code> helpers share the same signature and accept an optional parameters map as their second argument:</p><pre><code class="clojure">&#91;:get &quot;/posts/:id&quot; :post/view :post&#93;
+
+&#40;url-for :post {:id 1}&#41;
+
+&#40;redirect-to :post {:id 1}&#41;
+</code></pre><p>Namespaced keywords are supported as well</p><pre><code class="clojure">&#91;:get &quot;/authors/:author-id/posts/:id&quot; :post/view&#93;
+
+&#40;url-for :post/view {:author/id 1 :id 2}&#41;
+
+&#40;redirect-to :post/view {:author/id 1 :id 2}&#41;
+
+; or you can use the exact parameter name with a - instead of a /
+&#40;url-for :post/view {:author-id 1 :id 2}&#41;
+</code></pre><h3 id="user-content-query-parameters">Query Parameters</h3><p>Anything you pass to <code>url-for</code> or <code>redirect-to</code> that isn't defined as a route parameter will be appended as a query parameter</p><pre><code class="clojure">&#91;:get &quot;/posts/:post-id/comments/:id/edit&quot; :comment/edit&#93;
+
+&#40;url-for :comment/edit {:post/id 1 :id 2 :all true}&#41; ; =&gt; &quot;/post/1/comment/2/edit?all=true&quot;
+</code></pre><h2 id="user-content-route-responses">Route Responses</h2><p>Routes don't have to just respond with <a href='https://github.com/weavejester/hiccup'>hiccup vectors</a>, they can also respond with a map which overrides any layouts or the coast default of rendering with html.</p><pre><code class="clojure">&#40;defn json &#91;request&#93;
+  {:status 200 :body {:message &quot;ok&quot;} :headers {&quot;content-type&quot; &quot;application/json&quot;}}&#41; ; this responds with json
+
+&#40;defn json &#91;request&#93;
+  &#40;coast/ok {:message &quot;ok&quot;} :json&#41;&#41; ; same as above, but shorter
+
+&#40;coast/api
+  &#91;:get &quot;/&quot; ::json&#41;&#93;&#41;
+</code></pre><p>You can define separate routes for an api and a site:</p><pre><code class="clojure">&#40;ns your-app
+  &#40;:require &#91;coast&#93;&#41;&#41;
+
+&#40;def routes
+  &#40;coast/routes
+    ; this route corresponds to the src/site/home.clj index function
+    &#40;coast/site
+      &#91;:get &quot;/&quot; :home/index :site.home/index&#93;&#41;
+
+    ; these routes correspond to the src/api/home.clj index and status functions
+    &#40;coast/api
+      &#91;:get &quot;/api&quot; :api.home/index&#93;
+      &#91;:get &quot;/api/status&quot; :api.home/status&#93;&#41;&#41;&#41;
+
+&#40;def app &#40;coast/app {:routes routes}&#41;&#41;
+</code></pre><p>Coast uses a different set of middleware functions when responding to an api request vs a site request.</p><p>The <code>api</code> routes do not check for layouts and a host of other things, making them lighter-weight than their site counterparts.</p><h2 id="user-content-route-resources">Route Resources</h2><p>You will often create resourceful routes to do CRUD operations on a resource.</p><p><code>resource</code> assigns CRUD routes to a namespace using a single line of code:</p><pre><code class="clojure">; This...
+&#91;:resource :post&#93;
+
+; ...equates to this:
+&#91;:get    &quot;/posts&quot;          :post/index&#93;
+&#91;:get    &quot;/posts/build&quot;    :post/build&#93;
+&#91;:post   &quot;/posts&quot;          :post/create&#93;
+&#91;:get    &quot;/posts/:id&quot;      :post/view&#93;
+&#91;:get    &quot;/posts/:id/edit&quot; :post/edit&#93;
+&#91;:put    &quot;/posts/:id&quot;      :post/change&#93;
+&#91;:delete &quot;/posts/:id&quot;      :post/delete&#93;
+</code></pre><p class="note">NOTE: This feature is only available when binding routes to a namespace.</p><h3 id="user-content-filtering-resources">Filtering Resources</h3><p>You can limit the routes assigned by the <code>resource</code> method by using the <code>except</code> or <code>only</code> keywords</p><h4 id="user-content-except">except</h4><p>Removes <code>GET resource/create</code> and <code>GET resource/:id/edit</code> routes:</p><pre><code class="clojure">; src/routes.clj
+&#91;:resource :post :except &#91;:create :edit&#93;&#41;
+</code></pre><h4 id="user-content-only">only</h4><p>Keeps only the passed routes:</p><pre><code class="clojure">; src/routes.clj
+&#91;:resource :post :only &#91;:index :view&#93;&#41;
+</code></pre><h3 id="user-content-resource-middleware">Resource Middleware</h3><p>You can wrap middleware around any resource as you would with a single route:</p><pre><code class="clojure">; src/routes.clj
+&#40;ns routes
+  &#40;:require &#91;coast&#93;&#41;&#41;
+
+&#40;defn auth &#91;handler&#93;
+  &#40;fn &#91;request&#93;
+    &#40;if &#40;some? &#40;:session request&#41;&#41;
+      &#40;handler request&#41;
+      &#40;coast/unauthorized &#91;:h1 &quot;HAL9000 says, \&quot;Sorry Dave, I can't let you do that\&quot;&quot;&#93;&#41;&#41;&#41;&#41;
+
+&#40;coast/with auth
+  &#91;:resource :post&#93;&#41;&#41;
+</code></pre><h2 id="user-content-route-prefixes">Route Prefixes</h2><p>If your application routes share common urls, instead of repeating the same urls for each route, you can prefix them like so:</p><pre><code class="clojure">; no prefix
+&#91;:get &quot;/api/v1/members&quot; :api.v1.members/index&#93;
+&#91;:post &quot;/api/v1/members&quot; :api.v1.members/create&#93;
+
+; with prefix
+&#40;coast/prefix-routes &quot;/api/v1&quot;
+  &#91;:get &quot;/members&quot;&#93;
+  &#91;:post &quot;/members&quot;&#93;&#41;
+
+</code></pre><h3 id="user-content-middleware">Middleware</h3><p>Assign one or many middleware to the route group:</p><pre><code class="clojure">&#40;coast/with auth
+  &#40;coast/prefix-routes &quot;/api/v1&quot;
+    &#91;:get &quot;/members&quot;
+    &#91;:post &quot;/members&quot;&#93;&#93;&#41;&#41;
+</code></pre><p class="note">NOTE: Route middleware executes after app middleware during the request and before app middleware during the response.</p><p>Route middleware also executes from top to bottom:</p><pre><code class="clojure">&#40;ns routes
+  &#40;:require &#91;coast&#93;
+            &#91;middleware&#93;&#41;&#41;
+
+&#40;def routes
+  &#40;coast/site
+    &#40;coast/with middleware/set-title
+      &#40;coast/with-layout :components/layout
+        &#91;:get &quot;/&quot; :home/index&#93;
+        &#91;:get &quot;/docs&quot; :home/docs&#93;
+        &#91;:get &quot;/docs/:doc.md&quot; :home/doc&#93;
+        &#91;:get &quot;/screencast&quot; :home/screencast&#93;
+
+        &#91;:get &quot;/sign-up&quot; :member/build&#93;
+        &#91;:post &quot;/members&quot; :member/create&#93;
+        &#91;:get &quot;/sign-in&quot; :session/build&#93;
+        &#91;:post &quot;/sessions&quot; :session/create&#93;
+
+        &#91;:resource :invite :only &#91;:build :create&#93;&#93;
+
+        &#40;coast/with middleware/auth
+          &#91;:get &quot;/dashboard&quot; :home/dashboard&#93;
+          &#91;:delete &quot;/sessions&quot; :session/delete&#93;
+          &#91;:resource :member :except &#91;:index :view :build :create&#93;&#93;
+          &#91;:resource :invite :except &#91;:index :view :build :create&#93;&#93;
+          &#91;:resource :post :only &#91;:build :create :edit :change :delete&#93;&#93;
+          &#91;:put &quot;/invite/:invite-id/approve&quot; :invite/approve&#93;&#41;
+
+        &#91;:resource :post :only &#91;:view :index&#93;&#93;&#41;&#41;
+
+    &#91;:404 :home/not-found&#93;
+    &#91;:500 :home/server-error&#93;&#41;&#41;
+</code></pre><p>In this example (from the coast docs site), the route middleware executes in this order:</p><ol><li>coast/site <&ndash; this wraps the routes in ring defaults functions for html returning routes</li><li>middleware/set-title</li><li>components/layout</li><li>middleware/auth</li></ol>

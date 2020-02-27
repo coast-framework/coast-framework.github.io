@@ -1,0 +1,90 @@
+<h1 id="user-content-migrations">Migrations</h1><ul><li><a href='#user-content-creating-migrations'>Creating Migrations</a></li><li><a href='#user-content-migration-files'>Migration Files</a></li><li><a href='#user-content-column-types'>Column Types</a></li><li><a href='#user-content-schema-table-api'>Schema Table API</a></li><li><a href='#user-content-run-migrations'>Run Migrations</a></li><li><a href='#user-content-sql-migrations'>SQL Migrations</a></li></ul><p>Database migrations are the key to all data driven web applications. Coast makes them easy.</p><h2 id="user-content-creating-migrations">Creating Migrations</h2><p>To make a new migration call this from your shell in the same directory as your Coast app</p><pre><code class="bash">coast gen migration create-table-member
+</code></pre><p>This generates a file in the <code>db/migrations</code> folder with a timestamp and the name <code>create&#95;table&#95;member.clj</code>:</p><pre><code class="clojure">&#40;ns migrations.20190926190239-create-table-member
+  &#40;:require &#91;coast.db.migrations :refer :all&#93;&#41;&#41;
+
+&#40;defn change &#91;&#93;
+  &#40;create-table :member
+    &#40;timestamps&#41;&#41;&#41;
+</code></pre><p class="note">NOTE: The primary key column <code>id</code> is automatically included with the <code>create-table</code> function.</p><p>There is also a way to specify columns from the shell as well:</p><pre><code class="bash">coast gen migration create-table-member email:text nick-name:text password:text photo:text
+</code></pre><p>Which yields:</p><pre><code class="clojure">&#40;ns migrations.20190926190239-create-table-member
+  &#40;:require &#91;coast.db.migrations :refer :all&#93;&#41;&#41;
+
+&#40;defn change &#91;&#93;
+  &#40;create-table :member
+    &#40;text :email&#41;
+    &#40;text :nick-name&#41;
+    &#40;text :password&#41;
+    &#40;text :photo&#41;
+    &#40;timestamps&#41;&#41;&#41;
+</code></pre><h2 id="user-content-migration-files">Migration Files</h2><p>A migration file requires either two functions <code>up</code> and <code>down</code> or a <code>change</code> function. The <code>change</code> function attempts to automatically detect the opposite sql it should generate on a rollback function. So, <code>create-table</code> becomes <code>drop-table</code>. <code>add-column</code> becomes <code>drop-column</code>. The <code>up</code> and <code>down</code> functions are still required for the edges.</p><p class="note">NOTE: Things less straightforward than creating/dropping tables may not do what you intend in <code>change</code> so be prepared to write <code>up</code> and <code>down</code> migrations still for things like <code>add-column</code>/<code>drop-column</code>.</p><h4 id="user-content-<code>up</code>"><code>up</code></h4><p>The <code>up</code> function is run when you call <code>make db/migrate</code></p><h4 id="user-content-<code>down</code>"><code>down</code></h4><p>The <code>down</code> function is run when you call <code>make db/rollback</code></p><h4 id="user-content-<code>change</code>"><code>change</code></h4><p>The <code>change</code> function is run when you call both.</p><p class="note">NOTE: It's recommended to keep your migrations as simple as possible.</p><p>Usually each migration file will either create a table or add a few columns or add indices but not all of those at the same time.</p><p>It's easier to find out which migration changed which part of the database when they do separate and specific things.</p><h2 id="user-content-column-types">Column Types</h2><p>This is the full list of column types supported by Coast migrations:</p><h3 id="user-content-column-types">Column Types</h3><table><thead><tr><th style='text-align:left'>function</th><th style='text-align:left'>description</th></tr></thead><tbody><tr><td style='text-align:left'>text</td><td style='text-align:left'>adds a text column</td></tr><tr><td style='text-align:left'>timestamp</td><td style='text-align:left'>adds a timestamp column</td></tr><tr><td style='text-align:left'>datetime</td><td style='text-align:left'>adds a datetime column</td></tr><tr><td style='text-align:left'>timestamptz</td><td style='text-align:left'>adds a timezone specific timestamp column (postgres only)</td></tr><tr><td style='text-align:left'>integer</td><td style='text-align:left'>adds an integer column</td></tr><tr><td style='text-align:left'>bool</td><td style='text-align:left'>adds a boolean column</td></tr><tr><td style='text-align:left'>decimal</td><td style='text-align:left'>adds a decimal column</td></tr><tr><td style='text-align:left'>timestamps</td><td style='text-align:left'>adds "created<i>at" and "updated</i>at" columns</td></tr><tr><td style='text-align:left'>json</td><td style='text-align:left'>adds a json column</td></tr></tbody></table><h3 id="user-content-column-modifiers">Column Modifiers</h3><p>This is the full list of column attributes you can pass into each column function</p><table><thead><tr><th style='text-align:left'>key</th><th style='text-align:left'>value</th><th style='text-align:left'>description</th></tr></thead><tbody><tr><td style='text-align:left'>:collate</td><td style='text-align:left'>string</td><td style='text-align:left'>sets the column collation (e.g. <code>utf8&#95;unicode</code>)</td></tr><tr><td style='text-align:left'>:null</td><td style='text-align:left'>true/false</td><td style='text-align:left'>adds "not null" if null is set to false</td></tr><tr><td style='text-align:left'>:unique</td><td style='text-align:left'>true/false</td><td style='text-align:left'>creates a unique constraint for this column</td></tr><tr><td style='text-align:left'>:default</td><td style='text-align:left'>any value</td><td style='text-align:left'>sets the default column value on insert</td></tr><tr><td style='text-align:left'>:references</td><td style='text-align:left'>column</td><td style='text-align:left'>creates a foreign key constraint on this column</td></tr><tr><td style='text-align:left'>:on-delete</td><td style='text-align:left'>cascade, set null, set default, no action</td><td style='text-align:left'>takes the specified action on delete</td></tr><tr><td style='text-align:left'>:on-update</td><td style='text-align:left'>cascade, set null, set default, no action</td><td style='text-align:left'>takes the specified action on update</td></tr></tbody></table><p class="tip">TIP: Don't create multiple tables in a single schema file. Instead, create a new file for each database change. This way you keep your database atomic and can roll back to any version.</p><h2 id="user-content-migration-commands">Migration Commands</h2><p>Below is the list of available migration commands.</p><h3 id="user-content-command-list">Command List</h3><table><thead><tr><th style='text-align:left'>command</th><th style='text-align:left'>description</th></tr></thead><tbody><tr><td style='text-align:left'><code>coast gen migration </code></td><td style='text-align:left'>creates a new migration file in <code>db/migrations</code></td></tr><tr><td style='text-align:left'><code>make db/migrate</code></td><td style='text-align:left'>runs all pending migration files</td></tr><tr><td style='text-align:left'><code>make db/rollback</code></td><td style='text-align:left'>rolls back the most recent migration file</td></tr></tbody></table><h2 id="user-content-schema-table-api">Schema Table API</h2><p>Below is the list of schema functions available to interact with database tables</p><h4 id="user-content-create-table">create-table</h4><p>Create a new database table:</p><pre><code class="clojure">&#40;defn change &#91;&#93;
+  &#40;create-table :person&#41;&#41;
+</code></pre><p>Create a new table if it doesn't already exist:</p><pre><code class="clojure">&#40;defn change &#91;&#93;
+  &#40;create-table :person {:if-not-exists true}&#41;&#41;
+</code></pre><p>Create a new table with a primary key other than <code>id</code>:</p><pre><code class="clojure">&#40;defn change &#91;&#93;
+  &#40;create-table :person {:primary-key &quot;person&#95;id&quot;}&#41;&#41;
+</code></pre><h4 id="user-content-rename-table">rename-table</h4><p>Rename an existing database table:</p><pre><code class="clojure">&#40;defn change &#91;&#93;
+  &#40;rename-table :person :people&#41;&#41;
+</code></pre><h4 id="user-content-drop-table">drop-table</h4><p>Drop a database table:</p><pre><code class="clojure">&#40;defn down &#91;&#93;
+  &#40;drop-table :person&#41;&#41;
+</code></pre><p class="note">NOTE: Typically you can rely on the <code>change</code> function with <code>create-table</code> to drop tables for you on rollback.</p><h4 id="user-content-<code>&#40;add-column-table-column-name-column-type&#41;</code>"><code>&#40;add-column table column-name column-type&#41;</code></h4><p>Alter a table and add a column</p><pre><code class="clojure">&#40;defn change &#91;&#93;
+  &#40;add-column :person :first-name :text :null false :unique true ...&#41;&#41;
+</code></pre><p>See the list of column modifiers above for the full list of arguments.</p><h4 id="user-content-<code>&#40;add-foreign-key-from-to-&amp;-{col-:col-pk-:pk-fk-name-:name-:as-m}&#41;</code>"><code>&#40;add-foreign-key from to &amp; {col :col pk :pk fk-name :name :as m}&#41;</code></h4><pre><code class="clojure">&#40;defn change &#91;&#93;
+  &#40;add-foreign-key :todo :person&#41;&#41;
+</code></pre><h4 id="user-content-<code>&#40;add-index-table-name-cols-&amp;-{:as-m}&#41;</code>"><code>&#40;add-index table-name cols &amp; {:as m}&#41;</code></h4><pre><code class="clojure">&#40;defn change &#91;&#93;
+  &#40;add-index :person :first-name&#41;&#41;
+
+; or for multiple columns
+
+&#40;defn change &#91;&#93;
+  &#40;add-index :person &#91;:first-name :last-name&#93;&#41;&#41;
+
+; or for a unique index
+
+&#40;defn change &#91;&#93;
+  &#40;add-index :person &#91;:first-name :last-name&#93; :unique true&#41;&#41;
+</code></pre><h4 id="user-content-<code>&#40;add-reference-table-name-ref-name-&amp;-{:as-m}&#41;</code>"><code>&#40;add-reference table-name ref-name &amp; {:as m}&#41;</code></h4><pre><code class="clojure">&#40;defn change &#91;&#93;
+  &#40;add-reference :todo :person&#41;&#41;
+</code></pre><h4 id="user-content-<code>alter-column</code>"><code>alter-column</code></h4><pre><code class="clojure">&#40;defn change &#91;&#93;
+  &#40;alter-column :person :first-name :json&#41;&#41;
+</code></pre><h4 id="user-content-<code>rename-column</code>"><code>rename-column</code></h4><pre><code class="clojure">&#40;defn change &#91;&#93;
+  &#40;rename-column :person :first-name :f-name&#41;&#41;
+</code></pre><h4 id="user-content-<code>rename-index</code>"><code>rename-index</code></h4><pre><code class="clojure">&#40;defn change &#91;&#93;
+  &#40;rename-index :old-index :new-index&#41;&#41;
+</code></pre><h4 id="user-content-<code>create-extension</code>"><code>create-extension</code></h4><pre><code class="clojure">&#40;defn change &#91;&#93;
+  &#40;create-extension &quot;extension name&quot;&#41;&#41;
+</code></pre><h4 id="user-content-<code>drop-extension</code>"><code>drop-extension</code></h4><pre><code class="clojure">&#40;defn down &#91;&#93;
+  &#40;drop-extension &quot;extension name&quot;&#41;&#41;
+</code></pre><h4 id="user-content-<code>drop-column</code>"><code>drop-column</code></h4><pre><code class="clojure">&#40;defn down &#91;&#93;
+  &#40;drop-column :person :first-name&#41;&#41;
+</code></pre><h4 id="user-content-<code>drop-foreign-key</code>"><code>drop-foreign-key</code></h4><pre><code class="clojure">&#40;defn down &#91;&#93;
+  &#40;drop-foreign-key :todo :table :person&#41;&#41;
+</code></pre><h4 id="user-content-<code>drop-index</code>"><code>drop-index</code></h4><pre><code class="clojure">&#40;defn down &#91;&#93;
+  &#40;drop-index :person :column :first-name&#41;&#41;
+
+; or multiple columns
+
+&#40;defn down &#91;&#93;
+  &#40;drop-index :person :column &#91;:first-name :last-name&#93;&#41;&#41;
+
+; or by name
+
+&#40;defn down &#91;&#93;
+  &#40;drop-index :person :name &quot;person&#95;first&#95;name&#95;index&quot;&#41;&#41;
+</code></pre><h4 id="user-content-<code>drop-reference</code>"><code>drop-reference</code></h4><pre><code class="clojure">&#40;defn down &#91;&#93;
+  &#40;drop-reference :todo :person&#41;&#41;
+</code></pre><h2 id="user-content-run-migrations">Run Migrations</h2><p>To run migrations, run the makefile command <code>db/migrate</code> from your terminal</p><h4 id="user-content-make-db/migrate">make db/migrate</h4><pre><code class="bash">make db/migrate
+</code></pre><p>The change function handles both <code>migrations</code> and <code>rollbacks</code> of a schema.</p><p>So <code>create-table :member</code> becomes <code>drop-table :member</code> when calling <code>make db/rollback</code>.</p><h4 id="user-content-make-db/rollback">make db/rollback</h4><p>To undo the last migration run <code>db/rollback</code>:</p><pre><code class="bash">make db/rollback
+</code></pre><h2 id="user-content-sql-migrations">SQL Migrations</h2><p>Plain SQL migrations in plain sql files are also supported</p><p>Append <code>.sql</code> to the end of a migration name to create a SQL migration:</p><pre><code class="bash">coast gen migration the-name-of-a-migration.sql
+</code></pre><p>This creates a sql migration instead of a clojure one.</p><p>Here's an example <code>sql</code> migration</p><pre><code class="sql">-- up
+create table customer &#40;
+  id serial primary key,
+  email text unique not null,
+  password text not null,
+  first&#95;name text,
+  last&#95;name text
+&#41;;
+
+-- down
+drop table customer;
+
+</code></pre>

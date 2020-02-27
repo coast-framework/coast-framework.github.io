@@ -1,0 +1,119 @@
+<h1 id="user-content-views">Views</h1><ul><li><a href='#user-content-basic-example'>Basic Example</a></li><li><a href='#user-content-request-information'>Request Information</a></li><li><a href='#user-content-helpers'>Helpers</a></li><li><a href='#user-content-view-logic'>View Logic</a></li><li><a href='#user-content-components'>Components</a></li><li><a href='#user-content-layout'>Layout</a></li><li><a href='#user-content-syntax'>Syntax</a></li></ul><p>Coast uses <a href='https://github.com/weavejester/hiccup'>hiccup</a> as its rendering engine, which is pretty darn fast and comes with an elegant API to create dynamic views.</p><h2 id="user-content-basic-example">Basic example</h2><p>Let's start with the classic <strong>Hello World</strong> example by rendering a hiccup vector.</p><p>All views are stored alongside form submission code in the <code>src</code> directory, which is in opposition to most other frameworks where controllers and views are separate files.</p><p>Coast takes a different "separation of concerns" where the concern isn't filetypes but instead logical bits of code that fit together.</p><p>It's always nice and sometimes jarring to see the form submission code right below the code that will be called on redirect or error in the same file.</p><pre><code class="clojure">&#91;:h1 &quot;Hello world&quot;&#93;
+</code></pre><p>This is a hiccup vector, clojure keywords make up the html bits, <code>:a</code>, <code>:h2</code>, <code>:div</code> and the rest of the vector is a map of parameters representing the html tag's attributes. The body of the tag is the last element of the vector.</p><p>Here's how it looks in practice.</p><p>Make a route that will render some html:</p><pre><code class="clojure">; src/routes.clj
+&#40;def routes
+  &#40;coast/site
+    &#91;:get &quot;/&quot; :home/index&#93;&#41;&#41;&#41;
+</code></pre><pre><code class="clojure">; src/home.clj
+
+&#40;defn index &#91;request&#93;
+  &#91;:div
+    &#91;:h1 &quot;Hello world&quot;&#93;&#93;&#41;
+</code></pre><p>That's all you need to render html to the client.</p><p>There are no separate templating libraries you have to learn, no special syntax (aside from hiccup's syntax), it's just clojure.</p><h3 id="user-content-nested-views">Nested views</h3><p>You can also render other functions that emit hiccup:</p><pre><code class="clojure">&#40;defn goodbye &#91;s&#93;
+  &#91;:h2 &#40;str &quot;Goodbye &quot; s&#41;&#93;&#41;
+
+&#40;defn index &#91;request&#93;&#41;
+  &#91;:div
+    &#91;:h1 &quot;Hello world&quot;&#93;
+    &#40;goodbye &quot;world&quot;&#41;&#93;
+</code></pre><h2 id="user-content-request-information">Request information</h2><p>All views have access to the current <code>request</code> map.</p><p>You can use request data inside your view functions like so:</p><pre><code class="clojure">&#91;:div &#40;str &quot;The request URL is &quot; &#40;:uri request&#41;&#41;&#93;
+</code></pre><h2 id="user-content-helpers">Helpers</h2><p>The following helpers are provided by Coast</p><h4 id="user-content-<code>coast/css</code>"><code>coast/css</code></h4><p>Adds a <code>link</code> tag to a CSS bundle.</p><p>Relative path (to CSS files in the <code>public</code> directory):</p><pre><code class="clojure">&#40;coast/css &quot;bundle.css&quot;&#41;
+
+; assuming the assets.edn looks something like this
+{&quot;bundle.css&quot; &#91;&quot;style.css&quot;&#93;}
+</code></pre><p>The code above outputs:</p><pre><code class="html">&lt;link rel=&quot;stylesheet&quot; href=&quot;/style.css&quot; /&gt;
+</code></pre><h4 id="user-content-<code>coast/js</code>"><code>coast/js</code></h4><p>Adds a <code>script</code> tag to a JS bundle</p><pre><code class="clojure">&#40;coast/js &quot;bundle.js&quot;&#41;
+
+; assuming the assets.edn looks like this
+{&quot;bundle.js&quot; &#91;&quot;app.js&quot; &quot;app2.js&quot;&#93;}
+</code></pre><p>The code above outputs:</p><pre><code class="html">&lt;script type=&quot;text/javascript&quot; src=&quot;/app.js&quot;&gt;&lt;/script&gt;
+&lt;script type=&quot;text/javascript&quot; src=&quot;/app2.js&quot;&gt;&lt;/script&gt;
+</code></pre><p>in development.</p><p class="note">NOTE: In production, the assets are bundled and minified into one js file and one css file.</p><h4 id="user-content-url-for">url-for</h4><p>Returns the URL for a route.</p><p>For example, using the following example route…</p><pre><code class="clojure">&#91;:get &quot;/customers/:customer-id&quot; :customer/show&#93;
+</code></pre><p>…if you pass the route name and any route parameters…</p><pre><code class="clojure">&#91;:div
+  &#91;:a {:href &#40;url-for :customer/show {:customer/id 123}&#41;}
+    &quot;View customer&quot;&#93;&#93;
+</code></pre><p>…the route URL will render like so:</p><pre><code class="html">&lt;a href=&quot;/customers/123&quot;&gt;
+  View customer
+&lt;/a&gt;
+</code></pre><h4 id="user-content-csrf">CSRF</h4><p>You can access the CSRF token and input field using one of the following helpers.</p><h4 id="user-content-<code>csrf</code>"><code>csrf</code></h4><pre><code class="clojure">&#91;:form {:action &quot;/&quot; :method &quot;POST&quot;}
+  &#40;coast/csrf&#41;&#93;
+</code></pre><p>Which renders</p><pre><code class="html">&lt;form action=&quot;/&quot; method=&quot;POST&quot;&gt;
+  &lt;input type=&quot;hidden&quot; name=&quot;&#95;&#95;anti-forgery-token&quot; value=&quot;&lt;token value&gt;&quot; /&gt;
+&lt;/form&gt;
+</code></pre><h4 id="user-content-forms">Forms</h4><p>You never really have to know about the csrf field itself because coast has built in form components as well</p><h4 id="user-content-<code>form</code>"><code>form</code></h4><pre><code class="clojure">&#40;coast/form &#40;coast/action-for :customer/change {:customer/id 123}&#41;
+  &#91;:input {:type &quot;text&quot; :name &quot;first-name&quot; :value &quot;&quot;}&#93;&#41;
+</code></pre><p>The csrf field is automatically appended to the <code>coast/form</code> form.</p><h4 id="user-content-<code>form-for</code>"><code>form-for</code></h4><pre><code class="clojure">&#40;coast/form-for :customer/change {:customer/id 123}
+  &#91;:input {:type &quot;text&quot; :name &quot;first-name&quot; :value &quot;&quot;}&#93;&#41;
+</code></pre><p><code>form-for</code> is a convenience function that takes a coast route name and any route parameters followed by the rest of the form.</p><h2 id="user-content-view-logic">View Logic</h2><p>Coast uses clojure code to insert conditional logic into hiccup vectors</p><p>Here's an example of one way to do authentication:</p><pre><code class="clojure">&#40;defn index &#91;request&#93;
+  &#40;let &#91;session &#40;:session request&#41;&#93;
+    &#91;:div
+
+      &#40;if session
+        &quot;You are logged in!&quot;
+        &#91;:a {:href &quot;/login&quot;} &quot;Click here to log in&quot;&#93;&#41;&#93;&#41;&#41;
+</code></pre><p>If you need to loop through a list of things, here is one way to do it:</p><pre><code class="clojure">&#40;ns post
+  &#40;:require &#91;coast&#93;&#41;&#41;
+
+&#40;defn index &#91;request&#93;
+  &#40;let &#91;posts &#40;coast/q '&#91;:select &#42; :from post&#93;&#41;&#93;
+    &#91;:ul
+      &#40;for &#91;post posts&#93;
+        &#91;:li &#40;:post/title post&#41;&#93;&#41;&#93;&#41;&#41;
+</code></pre><h4 id="user-content-<code>raw</code>"><code>raw</code></h4><p>Newer versions of hiccup (2.0.0 and greater) escape all html by default, if you need to render a string as html, you'll have to explicitly call raw</p><pre><code class="clojure">&#40;coast/raw &#91;:div &quot;&lt;b&gt;is fine now&lt;/b&gt;&quot;&#93;&#41;
+</code></pre><h2 id="user-content-components">Components</h2><p>Keeping track of hiccup code can become unwieldy if the functions get long enough, similar to HTML code.</p><p>Coast has a way of separating bits of HTML into smaller chunks that can be called on when needed. Components.</p><p>Here's a basic example:</p><pre><code class="clojure">&#40;defn modal &#91;title &amp; content&#93;
+  &#91;:div {:class &quot;modal&quot; :tabindex &quot;-1&quot; :role &quot;dialog&quot;}
+   &#91;:div {:class &quot;modal-dialog&quot; :role &quot;document&quot;}
+    &#91;:div {:class &quot;modal-content&quot;}
+     &#91;:div {:class &quot;modal-header&quot;}
+      &#91;:h5 {:class &quot;modal-title&quot;} title&#93;
+      &#91;:button {:type &quot;button&quot; :class &quot;close&quot; :data-dismiss &quot;modal&quot; :aria-label &quot;Close&quot;}
+       &#91;:span {:aria-hidden &quot;true&quot;}
+        &quot;×&quot;&#93;
+       &#93;&#93;
+     &#91;:div {:class &quot;modal-body&quot;} content&#93;
+     &#91;:div {:class &quot;modal-footer&quot;}
+      &#91;:button {:type &quot;button&quot; :class &quot;btn btn-primary&quot;}
+       &quot;Save changes&quot;&#93;
+      &#91;:button {:type &quot;button&quot; :class &quot;btn btn-secondary&quot; :data-dismiss &quot;modal&quot;}
+       &quot;Close&quot;&#93;
+      &#93;&#93;
+    &#93;&#93;&#41;
+</code></pre><p>Use the <code>modal</code> component like this:</p><pre><code class="clojure">&#40;defn index &#91;request&#93;
+  &#91;:div
+    &#91;:a {:href &quot;#&quot; :id &quot;show-modal&quot;}&#93;
+
+    &#40;modal &quot;My Modal&quot;
+      &#91;:p &quot;My modal body goes here&quot;&#93;
+      &#91;:div &quot;In fact multiple things can go here&quot;&#93;&#41;&#93;&#93;&#41;
+</code></pre><p>This is assuming you have the requisite js somewhere.</p><h2 id="user-content-layout">Layout</h2><p>Layouts in coast are specified alongside the routes which makes supporting multiple layouts a little easier</p><p>Here's an example:</p><pre><code class="clojure">&#40;defn my-layout-function &#91;request body&#93;
+  &#91;:html
+    &#91;:head
+     &#91;:meta {:name &quot;viewport&quot; :content &quot;width=device-width, initial-scale=1&quot;}&#93;
+     &#40;coast/css &quot;bundle.css&quot;&#41;
+     &#40;coast/js &quot;bundle.js&quot;&#41;&#93;
+    &#91;:body
+     body&#93;&#93;&#41;
+
+
+&#40;defn my-other-layout-function &#91;request body&#93;
+ &#91;:html
+   &#91;:head
+    &#91;:meta {:name &quot;viewport&quot; :content &quot;width=device-width, initial-scale=1&quot;}&#93;
+    &#40;coast/css &quot;bundle.css&quot;&#41;
+    &#40;coast/js &quot;bundle.js&quot;&#41;&#93;
+   &#91;:body
+    body&#93;&#93;&#41;
+
+
+&#40;def routes
+  &#40;coast/routes
+    &#40;coast/site
+      &#40;coast/with-layout :my-layout-function
+        &#91;:get &quot;/&quot; :home/index&#93;
+        &#91;:resource :customer&#93;
+
+      &#40;coast/with-layout :my-other-layout-function
+        &#91;:get &quot;/other-route&quot; :other/route&#93;&#41;&#41;&#41;&#41;&#41;
+</code></pre><h2 id="user-content-syntax">Syntax</h2><p>Hiccup also offers a more terse syntax in case you get tired of writing out html identifiers and class names in maps:</p><p>This in html:</p><pre><code class="html">&lt;div id=&quot;my-id&quot; class=&quot;btn btn-solid&quot;&gt;&lt;/div&gt;
+</code></pre><p>...becomes this in normal hiccup</p><pre><code class="clojure">&#91;:div {:id &quot;my-id&quot; :class &quot;btn btn-solid&quot;}&#93;
+</code></pre><p>...becomes this in terse hiccup</p><pre><code class="clojure">&#91;:div#my-id.btn.btn-solid&#93;
+</code></pre>

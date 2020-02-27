@@ -1,0 +1,24 @@
+<h1 id="user-content-middleware">Middleware</h1><ul><li><a href='#user-content-creating-middleware'>Creating Middleware</a></li><li><a href='#user-content-using-middleware'>Using Middleware</a></li><li><a href='#user-content-route-middleware'>Route Middleware</a></li><li><a href='#user-content-middleware-options'>Middleware Options</a></li></ul><p>Middleware hook into the request lifecycle of your application.</p><p>They are a set of functions executed in sequence and let you transform the request and/or the response.</p><p>As an example, Coast provides several middleware functions inside of the <code>app</code> function.</p><h2 id="user-content-creating-middleware">Creating Middleware</h2><p>To create a new middleware, Coast's convention is to define a <a href='https://github.com/ring-clojure/ring/wiki/Middleware-Patterns'>ring middleware</a> function in the <code>src/middleware.clj</code> file</p><pre><code class="clojure">&#40;ns middleware
+  &#40;:require &#91;coast&#93;&#41;&#41;
+
+&#40;defn auth &#91;handler&#93;
+  &#40;fn &#91;request&#93;
+    &#40;if &#40;some? &#40;:session request&#41;&#41;
+      &#40;handler request&#41;
+      &#40;coast/unauthorized &quot;No&quot;&#41;&#41;&#41;&#41;
+</code></pre><p>In the example <code>auth</code> middleware, we want to show a 401 unauthorized response if there is no session</p><h3 id="user-content-middleware-execution-order">Middleware Execution Order</h3><p>When your middleware function gets called, you can modify the request or the response like this:</p><pre><code class="clojure">&#40;defn your-middleware &#91;handler&#93;
+  &#40;fn &#91;request&#93;
+    ; request == {:request-method :get :uri &quot;/&quot; :headers {} :params {}}
+    &#40;let &#91;request &#40;merge request {:hello &quot;world&quot;}&#41;
+          response &#40;handler request&#41;&#93;
+      ; response == {:status 200 :body &quot;&quot; :headers {&quot;content-type&quot; &quot;text/html&quot;}}
+      &#40;assoc response :status 404&#41;&#41;&#41;&#41;
+</code></pre><p>All middleware referenced "below" your handler function modifies the request before your function and then it modifies the response after your function is called.</p><p>In fact, while coast is a "web app framework", the <code>app</code> function is really just made up of a series of ring middleware, like this:</p><h3 id="user-content-route-middleware">Route Middleware</h3><p>Route middleware can modify the request before the functions you write and modify the response map after.</p><p>Even <code>404</code>'s are middleware functions that come from <code>&#40;coast/site&#41;</code>.</p><p>Coast calls one function on every route defined underneath <code>site</code>:</p><pre><code class="clojure">&#40;def routes
+  &#40;coast/site
+    &#40;coast/with-layout :layout-fn
+      &#91;:get &quot;/posts&quot; :post/index&#93;
+      &#91;:post &quot;/posts&quot; :post/create&#93;&#41;&#41;&#41;
+</code></pre><h4 id="user-content-<code>site</code>"><code>site</code></h4><p>This function wraps the routes underneath it in csrf protection, sessions, cookies and flash messages.</p><h4 id="user-content-<code>with-layout</code>"><code>with-layout</code></h4><p>This function wraps all of the routes below it in the layout function defined which takes two arguments, the request and the response from your handler function</p><h3 id="user-content-middleware-options">Middleware Options</h3><p>Coast can receive several options to the various middleware functions.</p><pre><code class="clojure">&#40;coast/app {:storage &quot;/path/to/your/files&quot;}&#41;
+</code></pre><p>Those two are the most common keys that coast can be configured with:</p><h4 id="user-content-<code>:storage</code>"><code>:storage</code></h4><p>This is the path to where user uploaded files can be served from, so you might want to put this in an environment variable and reference it if you need to store user uploaded things.</p><h4 id="user-content-<code>:session</code>"><code>:session</code></h4><p>The session key can be modified from <code>coast/site</code> like so:</p><pre><code class="clojure">&#40;coast/site {:session {:cookie-attrs {:max-age 2629800}}}
+  &#91;:get &quot;/&quot; ::index&#93;&#41;
+</code></pre><p>There are multiple keys you can pass to the <code>:session</code> key, but <code>cookie-attrs</code> is the most common one. You can adjust how long a given person can stay logged into your site, the cookies' name in their browsers, anything about the <a href='https://github.com/ring-clojure/ring/wiki/Sessions'>ring session cookie store</a>, really.</p>

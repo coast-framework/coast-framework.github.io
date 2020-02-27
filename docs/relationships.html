@@ -1,0 +1,46 @@
+<h1 id="user-content-relationships">Relationships</h1><ul><li><a href='#user-content-has-many'>Has Many</a></li><li><a href='#user-content-belongs-to'>Belongs To</a></li><li><a href='#user-content-has-many-through'>Has Many Through</a></li></ul><p>In Coast relationships allow you to do more sophisticated queries than you would be able to otherwise.</p><p>If you never find yourself needing <a href='/docs/pull.md'>pull queries</a> you can skip this section altogether.</p><h2 id="user-content-basic-example">Basic Example</h2><p>Here's an example with two database tables: <code>customer</code> and <code>purchase</code>.</p><p>To add the relationship, head over to <code>db/associations.clj</code>:</p><pre><code class="clojure">&#40;ns associations
+  &#40;:require &#91;coast.db.associations :refer &#91;table belongs-to has-many tables&#93;&#93;&#41;&#41;
+
+&#40;defn associations &#91;&#93;
+  &#40;tables
+    &#40;table :customer
+      &#40;has-many :purchases&#41;&#41;
+
+    &#40;table :purchase
+      &#40;belongs-to :customer&#41;&#41;&#41;&#41;
+</code></pre><p>This defines a relationship between <code>:customer</code> and <code>:purchase</code> where a <code>customer</code> has many <code>purchases</code> and the purchase table has a <code>customer</code> column that references the <code>customer.id</code> column.</p><p class="note">NOTE: <code>has-many</code> attempts to make the keyword you specify singular to match the underlying singular database table name.</p><p>If you have a different table name or a table name that can't be turned into a singular, you can specify the table name:</p><pre><code class="clojure">&#40;table :customer
+  &#40;has-many :stuff-bought :table-name &quot;purchase&quot;&#41;&#41;
+</code></pre><p>You can also specify the foreign key column as well:</p><pre><code class="clojure">&#40;table :customer&#41;
+  &#40;has-many :purchases :foreign-key &quot;id&quot;&#41;&#41;
+</code></pre><h2 id="user-content-belongs-to">Belongs To</h2><p>Belongs to represents tables with columns referencing another table.</p><p>Given these two tables:</p><ul><li>member<ul><li>id</li><li>screen_name</li><li>updated_at</li><li>created_at</li></ul></li><li>micropost<ul><li>id</li><li>member references member(id)</li><li>updated_at</li><li>created_at<pre><code class="clojure">&#40;table :micropost
+  &#40;belongs-to :member&#41;&#41;
+</code></pre></li></ul></li></ul><p>You can specify a table name that won't be singularized as well:</p><pre><code class="clojure">&#40;table :micropost
+  &#40;belongs-to :person :table-name &quot;member&quot;&#41;&#41;
+</code></pre><p>You can also specify the foreign key as well</p><pre><code class="clojure">&#40;table :micropost
+  &#40;belongs-to :member :foreign-key &quot;id&quot;&#41;&#41;
+</code></pre><h2 id="user-content-has-many-through">Has Many Through</h2><p>You can create a "many to many" relationship with <code>has-many :through</code>.</p><p>Here's an example, with four tables</p><ul><li>author<ul><li>id</li><li>screen_name</li><li>updated_at</li><li>created_at</li></ul></li><li>post<ul><li>id</li><li>author</li><li>title</li><li>body</li><li>updated_at</li><li>created_at</li></ul></li><li>tag<ul><li>id</li><li>name unique</li><li>updated_at</li><li>created_at</li></ul></li><li>tagged<ul><li>id</li><li>post</li><li>tag</li><li>updated_at</li><li>created_at<pre><code class="clojure">; db/associations.clj
+&#40;ns associations
+  &#40;:require &#91;coast.db.associations :refer &#91;table belongs-to has-many tables&#93;&#93;&#41;&#41;
+
+&#40;defn associations &#91;&#93;
+  &#40;tables
+    &#40;table :author
+      &#40;has-many :posts&#41;&#41;
+
+    &#40;table :post
+      &#40;belongs-to :author&#41;
+      &#40;has-many :tagged&#41;
+      &#40;has-many :tags :through :tagged&#41;&#41;
+
+    &#40;table :tag
+      &#40;has-many :tagged&#41;
+      &#40;has-many :posts :through :tagged&#41;&#41;
+
+    &#40;table :tagged
+      &#40;belongs-to :post&#41;
+      &#40;belongs-to :tag&#41;&#41;&#41;&#41;
+</code></pre></li></ul></li></ul><p>Has many through allows you to shortcut through database tables and pull data out in this way:</p><pre><code class="clojure">&#40;coast/pull '&#91;author/screen-name
+              {:author/posts &#91;post/title post/body
+                              {:post/tags &#91;tag/name&#93;}&#93;}&#93;
+            {:author/id 1}&#41;
+</code></pre><p>For more information on pull syntax and how it works and relates to <code>db/associations.clj</code> check out the <a href='/docs/pull.md'>pull syntax doc</a></p>

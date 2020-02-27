@@ -1,0 +1,139 @@
+<h1 id="user-content-upgrading-from-eta">Upgrading from eta</h1><ul><li><a href='#user-content-getting-started'>Getting Started</a></li><li><a href='#user-content-migrations'>Migrations</a></li><li><a href='#user-content-schema'>Schema</a></li><li><a href='#user-content-querying'>Querying</a></li><li><a href='#user-content-exception-handling'>Exception Handling</a></li><li><a href='#user-content-routing'>Routing</a></li><li><a href='#user-content-views'>Views</a></li><li><a href='#user-content-environment'>Environment</a></li></ul><p>The <strong>theta</strong> release contains a number of bug fixes and API improvements to keep the code base simple.</p><h2 id="user-content-getting-started">Getting Started</h2><p>The first step to upgrade from <code>eta</code> to <code>theta</code> is to update coast itself and add your database driver to <code>deps.edn</code></p><pre><code class="clojure">; deps.edn
+{:deps {coast-framework/coast.theta {:mvn/version &quot;1.0.0&quot;}
+        org.postgresql/postgresql {:mvn/version &quot;42.2.5&quot;}
+       ; or for sqlite
+       org.xerial/sqlite-jdbc {:mvn/version &quot;3.25.2&quot;}}}
+</code></pre><p>This is the first release where multiple databses (postgres and sqlite) are supported, but it also means that the database driver is up to you, not coast, similar to all of the other web frameworks out there.</p><p>The next step is to add another path to <code>deps.edn</code>'s <code>:paths</code> key:</p><pre><code class="clojure">; deps.edn
+{:paths &#91;&quot;db&quot; &quot;src&quot; &quot;resources&quot;&#93;}
+</code></pre><p>The db folder is now where all database related files are stored instead of resources</p><p>Finally, re-download the <code>coast</code> shell script just like if you were installing coast again for the first time. There is a reason it's <code>coast.theta</code> and not <code>coast.eta</code></p><pre><code class="bash">curl -o /usr/local/bin/coast https://raw.githubusercontent.com/coast-framework/coast/master/coast &amp;&amp; chmod a+x /usr/local/bin/coast
+</code></pre><h2 id="user-content-migrations">Migrations</h2><p>There were a <em>just a few</em> changes to the way database migrations and database schema definitions are handled, so instead of confusing edn migrations which should still be supported, you can now define migrations with clojure and define the schema yourself as well. Plain SQL migrations still work and will always work.</p><p>Here's how the new migrations work</p><pre><code class="bash">coast gen migration create-table-member email:text nick-name:text password:text photo:text
+</code></pre><p>This generates a file in the db folder that looks like this:</p><pre><code class="clojure">&#40;ns migrations.20190926190239-create-table-member
+  &#40;:require &#91;coast.db.migrations :refer :all&#93;&#41;&#41;
+
+&#40;defn change &#91;&#93;
+  &#40;create-table :member
+    &#40;text :email&#41;
+    &#40;text :nick-name&#41;
+    &#40;text :password&#41;
+    &#40;text :photo&#41;
+    &#40;timestamps&#41;&#41;&#41;
+</code></pre><p>There are more helpers for columns and references detailed in <a href='/docs/migrations.md'>Migrations</a></p><p>Previously, this was a confusing mess of edn without any clear rhyme or reason. Hopefully this is an improvement over that. Running migrations is the same as before:</p><pre><code class="bash">make db/migrate
+</code></pre><p>This does not generate a <code>resources/schema.edn</code> like before because the schema for relationships has been separated and is now defined by you, which means pull queries not only work with <code>&#42;</code> as in</p><pre><code class="clojure">&#40;pull '&#42; &#91;:author/id 1&#93;&#41;
+; or
+&#40;q '&#91;:pull &#42;
+     :from author&#93;&#41; ; this will recursively pull the whole database starting from the author table
+</code></pre><p>but this also means that pull queries and the rest of coast works with existing database schemas. Here's how</p><h2 id="user-content-schema">Schema</h2><p>Before, the schema was tied to the database migrations, which seems like a great idea in theory, but in practice it made the migrations complex and brittle. Coast has moved away from that and has copied rails style schema definitions like so:</p><pre><code class="clojure">; db/associations.clj
+&#40;ns associations
+  &#40;:require &#91;coast.db.associations :refer &#91;table belongs-to has-many tables&#93;&#93;&#41;&#41;
+
+&#40;defn associations &#91;&#93;
+  &#40;tables
+    &#40;table :member
+      &#40;has-many :todos&#41;&#41;
+
+    &#40;table :todo
+      &#40;belongs-to :member&#41;&#41;&#41;&#41;
+</code></pre><p>This new associations file is essentially rails' model definitions all rolled into the same file because in coast you don't need models, just data in -> data out. These functions also build what was <code>schema.edn</code> but you have a lot more control over the column names, the table names and foreign key names, so something like this would also work</p><pre><code class="clojure">; db/associations.clj
+&#40;ns associations
+  &#40;:require &#91;coast.db.associations :refer &#91;table belongs-to has-many tables&#93;&#93;&#41;&#41;
+
+&#40;defn associations &#91;&#93;
+  &#40;tables
+    &#40;table :users
+      &#40;primary-key &quot;uid&quot;&#41;
+      &#40;has-many :todos :table-name &quot;items&quot;
+                       :foreign-key &quot;item&#95;id&quot;&#41;&#41;
+
+    &#40;table :todos
+      &#40;primary-key &quot;uid&quot;&#41;
+      &#40;belongs-to :users :foreign-key &quot;uid&quot;&#41;&#41;&#41;&#41;
+</code></pre><p>There's also support for "shortcutting" through intermediate join tables which gives the same experience as a "many to many" relationship:</p><pre><code class="clojure">; db/associations.clj
+&#40;ns associations
+  &#40;:require &#91;coast.db.associations :refer &#91;table belongs-to has-many tables&#93;&#93;&#41;&#41;
+
+&#40;defn associations &#91;&#93;
+  &#40;tables
+    &#40;table :member
+      &#40;has-many :todos&#41;&#41;
+
+    &#40;table :todo
+      &#40;belongs-to :member&#41;
+      &#40;has-many :tagged&#41;
+      &#40;has-many :tags :through :tagged&#41;&#41;
+
+    &#40;table :tagged
+      &#40;belongs-to :todo&#41;
+      &#40;belongs-to :tag&#41;
+
+    &#40;table :tag
+      &#40;has-many :tagged&#41;
+      &#40;has-many :todos :through :tagged&#41;&#41;&#41;&#41;&#41;
+</code></pre><h2 id="user-content-querying">Querying</h2><p>Querying is largely the same, there are new helpers like</p><pre><code class="clojure">&#40;coast/fetch :author 1&#41;
+</code></pre><p>This retrieves the whole row by primary key (assuming your primary key is id). Other notable differences are the requirement of a <code>from</code> statement in all queries:</p><pre><code class="clojure">&#40;coast/q '&#91;:select &#42; :from author&#93;&#41;
+</code></pre><p>Previously you could omit the <code>from</code> and do this:</p><pre><code class="clojure">&#40;coast/q '&#91;:select author/&#42;&#93;&#41;
+</code></pre><p>This may come back but I don't believe it works for this version. Another small change to pull queries inside of <code>q</code></p><pre><code class="clojure">&#40;coast/q '&#91;:pull author/id
+                 {:author/posts &#91;post/title post/body&#93;}
+           :from author&#93;
+</code></pre><p>Previously you had to surround the pull symbols with a vector, now you don't have to!</p><p>Another thing that's changed is <code>transact</code> has been deprecated in favor of the much simpler insert/update/delete functions:</p><pre><code class="clojure">&#40;coast/insert {:member/handle &quot;sean&quot;
+               :member/email &quot;sean@swlkr.com&quot;
+               :member/password &quot;whatever&quot;
+               :member/photo &quot;/some/path/to/photo.jpg&quot;}&#41;
+
+&#40;coast/update {:member/id 1
+               :member/email &quot;me@seanwalker.xyz&quot;}&#41;
+
+&#40;coast/delete {:member/id 1}&#41;
+</code></pre><p>You can also pass vectors of maps as well and everything should work assuming all maps have the same columns and all maps in <code>update</code> have a primary key column specified</p><p>Lesser known but will now work</p><pre><code class="clojure">&#40;coast/execute! '&#91;:update author
+                  :set email = ?email
+                  :where id = ?id&#93;
+                {:email &quot;new-email@email.com&quot;
+                 :id &#91;1 2 3&#93;}&#41;
+</code></pre><p>Oh one last thing about <code>delete</code>. It no longer returns the value that was deleted, it just returns the number of rows deleted.</p><h2 id="user-content-exception-handling">Exception Handling</h2><p>There was quite a bit of postgres specific code related to raise/rescue, that is gone now since the postgres library isn't included anymore, which means any postgres exceptions like foreign key constraint violations or unique constraint violations will show up as exceptions in application code.</p><h2 id="user-content-routing">Routing</h2><p>Routing has changed in a few ways, before you had to nest route vectors in another vector, which was confusing, now you call routes on the individual route vectors and coast does some formatting magic to get it into the right format.</p><pre><code class="clojure">&#40;ns routes
+  &#40;:require &#91;coast&#93;&#41;&#41;
+
+&#40;def routes
+  &#40;coast/site
+    &#40;coast/with-layout :components/layout
+      &#91;:get &quot;/&quot; :home/index&#93;
+      &#91;:get &quot;/posts&quot; :post/index&#93;
+      &#91;:get &quot;/posts/:id&quot; :post/view&#93;
+      &#91;:get &quot;/posts/build&quot; :post/build&#93;
+      &#91;:post &quot;/posts&quot; :post/create&#93;
+      &#91;:get &quot;/posts/:id/edit&quot; :post/edit&#93;
+      &#91;:post &quot;/posts/:id/edit&quot; :post/change&#93;
+      &#91;:post &quot;/posts/:id/delete&quot; :post/delete&#93;&#41;&#41;&#41;
+</code></pre><p>Before you had to wrap all vectors in another vector, now you don't it makes things a little cleaner.</p><p>Also multiple layout support per batch of routes is easier as well since you no longer pass <code>:layout</code> into app. Simply wrap any routes with <code>with-layout</code> and give that a function with two arguments and you're in business.</p><p>Since the vector of vectors confusion is gone now, routes more naturally lend themselves to function helpers and resource-style url formats:</p><pre><code class="clojure">&#40;ns routes
+  &#40;:require &#91;coast&#93;&#41;&#41;
+
+&#40;def routes
+  &#40;coast/site
+    &#40;coast/with-layout :components/layout
+      &#91;:resource :posts&#93;
+
+      ; is equal to all of the below routes
+
+      &#91;:get &quot;/posts&quot; :post/index&#93;
+      &#91;:get &quot;/posts/build&quot; :post/build&#93;
+      &#91;:get &quot;/posts/:id&quot; :post/view&#93;
+      &#91;:post &quot;/posts&quot; :post/create&#93;
+      &#91;:get &quot;/posts/:id/edit&quot; :post/edit&#93;
+      &#91;:post &quot;/posts/:id/edit&quot; :post/change&#93;
+      &#91;:post &quot;/posts/:id/delete&quot; :post/delete&#93;&#41;&#41;&#41;
+</code></pre><h2 id="user-content-views">Views</h2><p>Views have changed quite a bit, previous versions of coast treated code files like controllers that return html and that's back again, so before each file was separated in view/action function pairs in folders for each "action" that's not the case any more, the default layout for code is now this:</p><pre><code class="clojure">; src/&lt;table&gt;.clj
+&#40;defn index &#91;request&#93;&#41;
+&#40;defn view &#91;request&#93;&#41;
+&#40;defn build &#91;request&#93;&#41;
+&#40;defn create &#91;request&#93;&#41;
+&#40;defn edit &#91;request&#93;&#41;
+&#40;defn change &#91;request&#93;&#41;
+&#40;defn delete &#91;request&#93;&#41;
+</code></pre><p><code>index</code> and <code>view</code> correspond to a list/table page and a single row page.</p><p><code>build</code> and <code>create</code> correspond to a new database row form page and a place to submit that form and insert the new row into the database</p><p><code>edit</code> and <code>change</code> represent a form to edit an existing row and a place to submit that form and update the row in the db</p><p><code>delete</code> represents you guessed it a place to submit a delete form.</p><p>There are a few new helpers too, even though the old view helpers will still work:</p><pre><code class="clojure">&#40;ns home
+  &#40;:require &#91;coast&#93;&#41;&#41;
+
+&#40;coast/redirect-to ::index&#41;
+</code></pre><p>This is a combination of <code>redirect</code> and <code>url-for</code> and it makes the handlers so much cleaner.</p><p>There's also <code>form-for</code></p><pre><code class="clojure">&#40;ns home
+  &#40;:require &#91;coast&#93;&#41;&#41;
+
+&#40;defn edit &#91;request&#93;
+  &#40;coast/form-for ::change {:author/id 1}&#41;&#41;
+</code></pre><p>This is a combination of <code>coast/form</code> and <code>action-for</code>.</p><h2 id="user-content-environment">Environment</h2><p>While <code>.env</code> continues to work, there's now another option when it comes to configuring the app's envrionment: <code>env.edn</code>.</p><p>This is similar to .env except instead of <code>key=value</code> it's just <code>edn</code> and this can be checked in to the repo since the database configuration is now separate in <code>db.edn</code> and uses the <code>env</code> variables in production by default.</p><p>Just remember to change the session key and set the database values in the environment in production!</p><p>That's it for the major changes in Coast.</p>

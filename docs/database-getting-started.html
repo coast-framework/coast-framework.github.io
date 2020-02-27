@@ -1,0 +1,52 @@
+<h1 id="user-content-getting-started">Getting Started</h1><ul><li><a href='#user-content-supported-databases'>Supported Databases</a></li><li><a href='#user-content-setup'>Setup</a></li><li><a href='#user-content-basic-example'>Basic Example</a></li><li><a href='#user-content-connection-pooling'>Connection Pooling</a></li><li><a href='#user-content-debugging'>Debugging</a></li></ul><p>Coast was originally conceived as a simple, yet powerful clojure database library.</p><p>It evolved and grew from a yesql clone into a full-fledged database management library of it's own including a custom query builder, ORM (minus the O and the M), and custom clojure syntax migrations as well.</p><p>In this guide we'll learn to setup and use the <em>database provider</em>.</p><p class="note">NOTE: Coast uses the <a href='https://github.com/clojure/java.jdbc'>java.jdbc</a> and hikari (https://github.com/brettwooldridge/HikariCP) libraries under the hood</p><h2 id="user-content-supported-databases">Supported Databases</h2><p>The list of supported databases and their drivers:</p><table><thead><tr><th style='text-align:left'>database</th><th style='text-align:left'>driver</th></tr></thead><tbody><tr><td style='text-align:left'>postgresql</td><td style='text-align:left'><a href='https://github.com/pgjdbc/pgjdbc'>pgjdbc</a></td></tr><tr><td style='text-align:left'>sqlite3</td><td style='text-align:left'><a href='https://github.com/xerial/sqlite-jdbc'>sqlite-jdbc</a></td></tr></tbody></table><h2 id="user-content-setup">Setup</h2><h3 id="user-content-installation">Installation</h3><p>Coast by default installs the sqlite driver for you in the <code>deps.edn</code> file:</p><pre><code class="clojure">; deps.edn
+{:deps {org.xerial/sqlite-jdbc {:mvn/version &quot;3.25.2&quot;}}}
+</code></pre><p>You can install the postgres driver the same way:</p><pre><code class="clojure">; deps.edn
+{:deps {org.postgresql/postgresql {:mvn/version &quot;42.2.5&quot;}}}
+</code></pre><h3 id="user-content-database-creation">Database Creation</h3><p>Coast has a two handy cli commands to create and drop databases in production or development:</p><pre><code class="bash">make db/create
+</code></pre><p>and</p><pre><code class="bash">make db/drop
+</code></pre><p>This uses the <code>:coast-env</code> key from the <code>env.edn</code> file (or the <code>COAST&#95;ENV</code> environment variable) to determine which database from the <code>db.edn</code> file to create. For example given this <code>env.edn</code>:</p><pre><code class="clojure">{:coast-env &quot;dev&quot;}
+</code></pre><p>and this <code>db.edn</code></p><pre><code class="clojure">{:dev {:database &quot;project&#95;zero&#95;dev.sqlite3&quot;
+       :adapter &quot;sqlite&quot;}}
+</code></pre><p>The file <code>project&#95;zero&#95;dev.sqlite3</code> will be created in your project directory when you execute <code>make db/create</code>.</p><h3 id="user-content-configuration">Configuration</h3><p>Coast uses the <code>sqlite</code> connection by default.</p><p>The default connection can be set via the <code>db.edn</code> file:</p><pre><code class="clojure">; db.edn
+{:dev {:database &quot;project&#95;zero&#95;dev.sqlite3&quot;
+       :adapter &quot;sqlite&quot;}
+
+ :test {:database &quot;project&#95;zero&#95;test.sqlite3&quot;
+        :adapter &quot;sqlite&quot;}
+
+ :prod {:database #env :db-name
+        :adapter &quot;sqlite&quot;}}
+</code></pre><p>Postgres can be set similarly:</p><pre><code class="clojure">; db.edn
+{:dev {:database &quot;project&#95;zero&#95;dev&quot;
+       :adapter &quot;postgres&quot;}
+
+ :test {:database &quot;project&#95;zero&#95;test&quot;
+        :adapter &quot;postgres&quot;}
+
+ :prod {:database #env :db-name
+        :adapter &quot;postgres&quot;
+        :username #env :db-username
+        :password #env :db-password
+        :host #env :db-host
+        :port #env :db-port}}
+</code></pre><h2 id="user-content-basic-example">Basic Example</h2><p>Coast <a href='/docs/queries.md'>queries</a> has a data-driven API, meaning all queries are clojure vectors, similar to <a href='/docs/views.md'>views</a> and the <a href='/doc/routes.md'>routes</a>.</p><p class="note">NOTE: Coast uses the singular version of all words for table names which is in opposition to most other full stack frameworks.</p><p>For example to select all people from the person table:</p><pre><code class="clojure">&#40;coast/q '&#91;:select &#42; :from person&#93;&#41;
+; =&gt; &#91;{:person/email &quot;&quot; :person/first-name &quot;&quot; :person/last-name &quot;&quot;}&#93;
+</code></pre><h3 id="user-content-where-clause">Where Clause</h3><p>To add a where clause to a query, add a <code>:where</code> keyword to the vector:</p><pre><code class="clojure">&#40;coast/q '&#91;:select &#42;
+           :from person
+           :where &#91;first-name &quot;sean&quot;&#93;&#93;&#41;
+</code></pre><p>If you need more power out of your where query, feel free to pass a sql vector instead:</p><pre><code class="clojure">&#40;coast/q '&#91;:select &#42;
+           :from person
+           :where &#91;&quot;age &gt; ?&quot; 18&#93;&#93;&#41;
+</code></pre><p>To add multiple where clauses ANDed together, add multiple vectors:</p><pre><code class="clojure">&#40;coast/q '&#91;:select &#42;
+           :from person
+           :where &#91;first-name &quot;sean&quot;&#93;
+                  &#91;&quot;age &gt; ?&quot; 18&#93;&#93;&#41;
+</code></pre><p>Multiple where clauses OR'd together? prefix with the <code>or</code> symbol:</p><pre><code class="clojure">&#40;coast/q '&#91;:select &#42;
+           :from person
+           :where or &#91;first-name &quot;sean&quot;&#93;
+                     &#91;&quot;age &gt; ?&quot; 18&#93;&#93;&#41;
+</code></pre><p>See the <a href='/docs/queries.md'>queries</a> documentation for the complete API reference.</p><h2 id="user-content-connection-pooling">Connection Pooling</h2><p>Coast pools connections for reuse and all used connections are maintained unless the process dies.</p><p>To close all connections, call the <code>.close</code> method:</p><pre><code class="clojure">&#40;.close &#40;:datasource &#40;coast/connection&#41;&#41;&#41;
+</code></pre><h2 id="user-content-debugging">Debugging</h2><p>Debugging database queries can be handy in both development and production.</p><p>Coast has a very simple debugging mechanism, set <code>:debug</code> to true in <code>db.edn</code>:</p><pre><code class="clojure">{:dev {:database &quot;project&#95;zero&#95;dev.sqlite3&quot;
+       :adapter &quot;sqlite&quot;
+       :debug true}}
+</code></pre><p>This enables printing of all sql queries to <strong>stdout</strong>.</p>

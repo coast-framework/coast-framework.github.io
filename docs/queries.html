@@ -1,0 +1,156 @@
+<h1 id="user-content-queries">Queries</h1><ul><li><a href='#user-content-introduction'>Introduction</a></li><li><a href='#user-content-schema-conventions'>Schema Conventions</a></li><li><a href='#user-content-basic-example'>Basic Example</a></li><li><a href='#user-content-selects'>Selects</a></li><li><a href='#user-content-where-clauses'>Where Clauses</a></li><li><a href='#user-content-joins'>Joins</a></li><li><a href='#user-content-ordering-and-limits'>Ordering and Limits</a></li><li><a href='#user-content-inserts'>Inserts</a></li><li><a href='#user-content-updates'>Updates</a></li><li><a href='#user-content-deletes'>Deletes</a></li><li><a href='#user-content-helpers'>Helpers</a></li><li><a href='#user-content-sql-queries'>SQL Queries</a></li></ul><h2 id="user-content-introduction">Introduction</h2><p>Coast queries are quite a bit nicer than working with raw sql, there are a few shortcuts you can take that you can't with yesql style sql files.</p><p>This guide is an exhaustive showcase of all of the querying abilities that you too can have when you make your website with Coast.</p><h3 id="user-content-syntax-abstraction">Syntax Abstraction</h3><p>Coast attempts to abstract away database specific syntax so you can write queries in clojure vectors and theoretically switch databases with little to no effort. Think sqlite in development and postgresql in production.</p><p>Although, it's taboo to say, but you can easily run a low to medium traffic website (99% of all websites) with sqlite in production.</p><h3 id="user-content-conditional-queries">Conditional Queries</h3><p>You can also build incremental queries quite a bit easier instead of mashing SQL strings together.</p><pre><code class="clojure">&#40;let &#91;sql &quot;select &#42; from person&quot;
+      sql &#40;if condition?
+            &#40;str sql &quot; where email = ?&quot;&#41;
+            sql&#41;&#93;&#41;
+</code></pre><p>...versus</p><pre><code class="clojure">&#40;let &#91;query '&#91;:select &#42; :from person&#93;
+      query &#40;if condition?
+              &#40;conj query '&#91;:where &#91;email ?email&#93;&#93;&#41;
+              query&#41;&#93;&#41;
+</code></pre><h2 id="user-content-schema-conventions">Schema Conventions</h2><p>Coast uses a few conventions when dealing with databases.</p><h3 id="user-content-convention-1">Convention 1</h3><p>The first thing you'll notice is that every response back from the database uses qualified keywords like this:</p><pre><code class="clojure">{:table/column &quot;value&quot;}
+</code></pre><p>Given this table named <code>person</code></p><table><thead><tr><th style='text-align:left'>column</th><th style='text-align:left'>type</th></tr></thead><tbody><tr><td style='text-align:left'>id</td><td style='text-align:left'>integer</td></tr><tr><td style='text-align:left'>screen_name</td><td style='text-align:left'>text</td></tr><tr><td style='text-align:left'>email</td><td style='text-align:left'>text</td></tr><tr><td style='text-align:left'>password</td><td style='text-align:left'>text</td></tr><tr><td style='text-align:left'>updated_at</td><td style='text-align:left'>timestamp</td></tr><tr><td style='text-align:left'>created_at</td><td style='text-align:left'>timestamp</td></tr></tbody></table><p>The following query:</p><pre><code class="clojure">&#40;coast/q '&#91;:select &#42; :from person&#93;&#41;
+</code></pre><p>... would return something like this</p><pre><code class="clojure">&#91;{:person/id 1 :person/screen-name &quot;sean&quot; :person/email &quot;sean@example.com&quot; :person/password &quot;hashed&quot;}
+ {:person/id 2 :person/screen-name &quot;sean1&quot; :person/email &quot;sean1@example.com&quot; :person/password &quot;hashed&quot;}&#93;
+</code></pre><h3 id="user-content-convention-2">Convention 2</h3><p>The second thing you'll notice is that column names are automatically converted between kebab-case to camel_case and back again in the response.</p><p>So <code>screen&#95;name</code> in the database becomes <code>:screen-name</code> in your code.</p><h3 id="user-content-convention-3">Convention 3</h3><p>The third thing is that each table on creation uses "id" as it's primary key. This makes generating joins easier.</p><p>See <a href='/docs/migrations.md'>Migrations</a> for more details.</p><h2 id="user-content-basic-example">Basic Example</h2><p>Below is a basic example of a query</p><pre><code class="clojure">&#40;coast/q '&#91;:select &#42;
+           :from person
+           :where &#91;screen-name ?screen-name&#93;
+           :limit 1&#93;
+         {:screen-name &quot;@sean&quot;}&#41;
+</code></pre><h2 id="user-content-selects">Selects</h2><p>You can either select all of the columns in a given table with <code>&#42;</code>, use <code>ident</code>s or <code>qualified-ident</code>s.</p><pre><code class="clojure">'&#91;:select id screen-name
+  :from person&#93;
+
+; =&gt; &#91;{:person/id 123 :person/screen-name &quot;@sean&quot;}&#93;
+</code></pre><p class="note">NOTE: All responses from the database return qualified keywords in the format of <code>table/column</code></p><p>You can also qualify the columns like this:</p><pre><code class="clojure">'&#91;:select person/id person/screen-name
+  :from person&#93;
+</code></pre><h2 id="user-content-where-clauses">Where Clauses</h2><p>There are a few options for building up where clauses</p><h4 id="user-content-<code>:where</code>"><code>:where</code></h4><pre><code class="clojure">'&#91;:select &#42;
+  :from person
+  :where &#91;id ?id&#93;&#93;
+</code></pre><p>The way clojure symbols work, you don't have to put <code>?id</code> and pass in the params separately.</p><p>This also works:</p><pre><code class="clojure">&#91;:select :&#42;
+ :from :person
+ :where &#91;:id 1&#93;&#93;
+</code></pre><p>Notice that every element of every vector is a keyword, not a mix of symbols and keywords.</p><p>You can also pass in various operators to the where clause:</p><pre><code class="clojure">'&#91;:select &#42;
+  :from person
+  :where &#91;age &gt; 21&#93;&#93;
+</code></pre><h4 id="user-content-where-operators">where operators</h4><p>All of the following work as well:</p><p><code>&gt;</code>, <code>!=</code>, <code>&lt;=</code>, <code>=&gt;</code>, <code>&lt;</code>, <code>like</code></p><p>Coast queries attempt to match up the value with the correct sql operator:</p><pre><code class="clojure">&#40;coast/q '&#91;:select &#42;
+           :from person
+           :where &#91;id ?id&#93;&#93;
+         {:id nil}&#41;
+
+; =&gt; select &#42; from person where id is null
+</code></pre><pre><code class="clojure">&#40;coast/q '&#91;:select &#42;
+           :from person
+           :where &#91;id != ?id&#93;&#93;
+         {:id nil}&#41;
+
+; =&gt; select &#42; from person where id is not null
+</code></pre><pre><code class="clojure">&#40;coast/q '&#91;:select &#42;
+           :from person
+           :where &#91;id like ?screen-name&#93;&#93;
+         {:screen-name &quot;%ean&quot;}&#41;
+
+; =&gt; &quot;select &#42; from person where screen&#95;name like ?&quot;, '%ean'
+</code></pre><p>You can also pass in vectors to the where clause and it will automatically output an "in" statement</p><pre><code class="clojure">&#40;coast/q '&#91;:select &#42;
+           :from person
+           :where &#91;id ?ids&#93;&#93;
+         {:ids &#91;1 2 3&#93;}&#41;
+
+; =&gt; &quot;select &#42; from person where id in &#40;?, ?, ?&#41;&quot;, 1, 2, 3
+</code></pre><p>If all else fails, you can pass a sql vector to the where clause as well:</p><pre><code class="clojure">&#40;coast/q '&#91;:select &#42;
+           :from person
+           :where &#91;&quot;id not in &#40;?, ?, ?&#41;&quot; 1 2 3&#93;&#93;&#41;
+
+; =&gt; &quot;select &#42; from person where id not in &#40;?, ?, ?&#41;&quot;, 1, 2, 3
+</code></pre><p>This can be used to write subqueries, exists, between, or anything else your SQL loving heart desires.</p><h2 id="user-content-joins">Joins</h2><h4 id="user-content-joins">joins</h4><pre><code class="clojure">&#91;:select &#42;
+ :from person
+ :join todo&#93;
+
+; =&gt; &quot;select &#42; from person join todo on todo.person = person.id&quot;
+</code></pre><p>This is made easy by using coast's database conventions where every primary key is named "id" and every foreign key column is named after the table it references.</p><p><code>:left-join</code>, <code>:right-join</code>, <code>:left-outer-join</code>, <code>:right-outer-join</code>, <code>:outer-join</code>, <code>:full-outer-join</code>, <code>:full-join</code> and <code>:cross-join</code> all work similarly.</p><p>You can construct the join yourself as well:</p><pre><code class="clojure">&#91;:select &#42;
+ :from person
+ :join &#91;todo person/id todo/person-id&#93;&#93;
+</code></pre><p>Feel free to pass strings to <code>:join</code> as well:</p><pre><code class="clojure">&#91;:select &#42;
+ :from person
+ :join &quot;todo on todo.person&#95;id = person.id&quot;
+       &quot;tag on tag.todo = todo.id&quot;&#93;
+</code></pre><h2 id="user-content-ordering-and-limits">Ordering and Limits</h2><h4 id="user-content-distinct">distinct</h4><pre><code class="clojure">'&#91;:select :distinct age pet
+  :from person&#93;
+
+; =&gt; select distinct age, pet from person
+</code></pre><h4 id="user-content-group-by">group-by</h4><pre><code class="clojure">'&#91;:select age
+  :from person
+  :group-by age&#93;
+
+; or
+
+'&#91;:select age
+  :from person
+  :group age&#93;
+</code></pre><h4 id="user-content-order">order</h4><pre><code class="clojure">'&#91;:select &#42;
+  :from person
+  :order age desc name asc&#93;
+</code></pre><h4 id="user-content-having">having</h4><pre><code class="clojure">'&#91;:select age
+  :from person
+  :group age
+  :having age &gt; 21&#93;
+</code></pre><h4 id="user-content-offset/limit">offset/limit</h4><pre><code class="clojure">'&#91;:select &#42;
+  :from person
+  :offset 11
+  :limit 10&#93;
+</code></pre><h2 id="user-content-inserts">Inserts</h2><h4 id="user-content-insert">insert</h4><pre><code class="clojure">&#40;coast/insert {:person/email &quot;test@example.com&quot; :person/screen-name &quot;test&quot;}&#41;
+</code></pre><p>You can also insert multiple records at once</p><pre><code class="clojure">&#40;coast/insert &#91;{:person/email &quot;test1@test.com&quot; :person/screen-name &quot;test1&quot;}
+               {:person/email &quot;test2@test.com&quot; :person/screen-name &quot;test2&quot;}&#93;&#41;
+</code></pre><p>Feel free to not use the helper and just use execute! instead (which is similar to <code>q</code>)</p><pre><code class="clojure">&#40;coast/execute! &#91;:insert person/email person/screen-name
+                 :values &#91;&#91;&quot;test1@test.com&quot; &quot;test1&quot;&#93;
+                          &#91;&quot;test2@test.com&quot; &quot;test2&quot;&#93;&#93;&#93;&#41;
+
+; =&gt; &#40;2&#41;
+</code></pre><p class="note">NOTE: <code>execute!</code> returns a list of the number of rows inserted, to get the actual number try <code>first</code> on the result</p><h2 id="user-content-updates">Updates</h2><pre><code class="clojure">&#40;coast/update {:person/id 1 :person/last-name &quot;Appleseed&quot; :person/first-name &quot;Johnny&quot;}&#41;
+</code></pre><p><code>update</code> requires an <code>:id</code> key</p><p>It can also take a list of maps</p><pre><code class="clojure">&#40;coast/update &#91;{:person/id 1 :person/last-name &quot;Appleseed&quot;}
+               {:person/id 2 :person/last-name &quot;Newton&quot;}&#93;&#41;
+</code></pre><p><code>execute!</code> works here too</p><pre><code class="clojure">&#40;coast/execute! &#91;:update person
+                 :set &#91;person/first-name &quot;Isaac&quot;&#93;
+                      &#91;person/last-name &quot;Newt&quot;&#93;
+                 :where &#91;person/last-name &quot;Newton&quot;&#93;&#93;&#41;
+</code></pre><h2 id="user-content-deletes">Deletes</h2><h4 id="user-content-delete">delete</h4><p>Delete only deletes rows by primary key <code>:id</code></p><pre><code class="clojure">&#40;coast/delete {:person/id 1}&#41;
+</code></pre><p><code>execute!</code> works here too!</p><pre><code class="clojure">&#40;coast/execute! &#91;:delete
+                 :from person
+                 :where &#91;person/last-name &quot;Newton&quot;&#93;&#93;&#41;
+</code></pre><h2 id="user-content-helpers">Helpers</h2><h4 id="user-content-pluck">pluck</h4><p><code>pluck</code> takes a query and returns the first result, which is kind of weird, but that's what it's called</p><pre><code class="clojure">&#40;coast/pluck &#91;:select &#42; :from person :where &#91;id 1&#93;&#93;&#41;
+</code></pre><h4 id="user-content-fetch">fetch</h4><p><code>fetch</code> returns a given row by primary key</p><pre><code class="clojure">&#40;coast/fetch :person 1&#41; ; =&gt; {:person/first-name &quot;Johnny&quot; :person/last-name &quot;Appleseed&quot;}
+</code></pre><h4 id="user-content-cols">cols</h4><p>Returns the columns for a given table</p><pre><code class="clojure">&#40;coast/cols :person&#41;
+</code></pre><h2 id="user-content-sql-queries">SQL Queries</h2><p>In Coast there are two ways to pass in plain old sql queries</p><h3 id="user-content-<code>defq</code>"><code>defq</code></h3><p><code>defq</code> works by creating a <code>.sql</code> file in <code>resources/sql</code> and then calling that files from clojure with <code>defq</code> and instantly having access to all of that files sql bits.</p><p>Here's some SQL in a sql file: <code>resources/sql/posts.sql</code></p><pre><code class="sql">-- name: find-by-id
+-- fn: first!
+select &#42;
+from posts
+where posts.id = :id
+limit 1
+
+-- name: all
+select &#42;
+from posts
+
+-- name: insert
+insert into posts &#40;
+  title,
+  body
+&#41; values &#40;
+  :title,
+  :body
+&#41;
+
+-- name: update
+update posts
+set title = :title,
+    body = :body
+where posts.id = :id
+
+-- name: delete
+delete from posts where id = :id
+</code></pre><p>Here's a clojure file named <code>posts.clj</code> inside of the <code>db</code> folder with the namespace <code>db.posts</code>:</p><pre><code class="clojure">&#40;ns db.posts
+  &#40;:require &#91;coast&#93;&#41;&#41;
+
+&#40;coast/defq &quot;sql/posts.sql&quot;&#41;
+</code></pre><p>This generates functions <code>find-by-id</code>, <code>insert</code>, <code>update</code> and <code>delete</code> in the <code>db.posts</code> namespace at compile time.</p><p>Which means now this will work:</p><pre><code class="clojure">&#40;db.posts/insert {:title &quot;title&quot; :body &quot;body&quot;}&#41;
+</code></pre><p>and this:</p><pre><code class="clojure">&#40;db.posts/find-by-id {:id 1}&#41; ; =&gt; {:id 1 :title &quot;title&quot; :body &quot;body&quot;}
+</code></pre><p>Each generated function takes a single map and returns a list of maps from the database.</p><p class="note">NOTE: The maps and the returned rows as maps, do NOT have qualified keywords.</p><h3 id="user-content-<code>q</code>"><code>q</code></h3><p><code>q</code> also takes a sql vector with plain old sql like so:</p><pre><code class="clojure">&#40;coast/q &#91;&quot;select &#42; from person where id = ?&quot; 1&#93;&#41;
+</code></pre><p>This will return:</p><pre><code class="clojure">&#91;{:first-name &quot;Johnny&quot; :last-name &quot;Appleseed&quot; :id 1}&#93;
+</code></pre><p>Again, not namespace qualified.</p>

@@ -1,0 +1,44 @@
+<h1 id="user-content-configuration">Configuration</h1><ul><li><a href='#user-content-development'>Development</a></li><li><a href='#user-content-production'>Production</a></li><li><a href='#user-content-database'>Database</a></li></ul><h2 id="user-content-development">Development</h2><p>In Coast, configuration in the dev environment can come from four places, a <code>.env</code> file, a <code>env.edn</code> file, a <code>db.edn</code> and the OS's environment variables.</p><p>All of these files are located in the project's root directory.</p><p>You can access configuration values via the <code>coast/env</code> function:</p><pre><code class="clojure">&#40;ns your-project
+  &#40;:require &#91;coast&#93;&#41;&#41;
+
+&#40;coast/env :session-key&#41;
+</code></pre><p>Environment variable values are fetched using <code>coast/env</code> which accepts a keyword argument referencing the key you want in the lowercase and kebab case style. Whereas OS environment variables tend to look like this:</p><pre><code class="bash">COAST&#95;ENV=dev SESSION&#95;KEY=asecret123
+</code></pre><p>Coast env keys look like this:</p><pre><code class="clojure">{:coast-env &quot;dev&quot;
+ :session-key &quot;asecret123&quot;}
+</code></pre><p>In development, the <code>env.edn</code> file stores environment variables intended to be shared amongst developers, and by default this is checked in to source control. So be careful what you put in there</p><h2 id="user-content-production">Production</h2><p>In production, while the code looks the same <code>&#40;coast/env :session-key&#41;</code> where the values come from should <em>not</em> re-use the same values that are checked into source code in <code>env.edn</code>.</p><p>Coast encourages the use of either an on-server <code>.env</code> file located at the root of the project (i.e. the same directory as the running uberjar) or set the environment variables at the OS level or when running the uberjar from the shell session like so:</p><pre><code class="bash">COAST&#95;ENV=prod SESSION&#95;KEY=prodsecret123 java -jar your-app-standalone.jar
+</code></pre><p>Or if you use something like supervisor, you can set the environment variables in the specific <code>.conf</code> file for your project:</p><pre><code class="sh">&#91;program:your-app&#93;
+command=java -Dclojure.server.repl=&quot;{:port 5555 :accept clojure.core.server/repl}&quot; -Xmx100m -jar /home/deploy/your-app/your-app.jar
+directory=/home/deploy/your-app
+autostart=true
+autorestart=true
+startretries=3
+user=deploy
+redirect&#95;stderr=true
+stdout&#95;logfile=/home/deploy/your-app/app.log
+environment=DATABASE&#95;URL=&quot;jdbc:sqlite:/home/deploy/your-app/your&#95;app.db&quot;,COAST&#95;ENV=prod,SESSION&#95;KEY=prodsecret123,PORT=3000
+</code></pre><p>Common Coast env variables and their defaults:</p><pre><code class="clojure">{:coast-env &quot;dev&quot; ; default
+ :session-key &quot;&quot; ; there is no default, this is required for the cookie sessions
+ :port &quot;1337&quot; ; this is the default, set it to any port your computer is listening for connections on
+</code></pre><h2 id="user-content-database">Database</h2><p>All database configuration values are stored in <code>db.edn</code> which is also safe to check in to source control and is <strong>not</strong> <code>.gitignore</code>'d by default.</p><p>Here is what the default <code>db.edn</code> file looks like:</p><pre><code class="clojure">{:dev {:database &quot;your&#95;app.sqlite3&quot;
+       :adapter &quot;sqlite&quot;}
+
+ :test {:database &quot;your&#95;app.sqlite3&quot;
+        :adapter &quot;sqlite&quot;}
+
+ :prod {:database #env :db-name
+        :adapter &quot;sqlite&quot;}}
+
+ ; or you can use postgres
+
+ ; :prod {:database #env :db-name
+ ;        :adapter &quot;postgres&quot;
+ ;        :username #env :db-username
+ ;        :password #env :db-password
+ ;        :host #env :db-host
+ ;        :port #env :db-port}}
+</code></pre><p>There are three different values for the three different environments the database will be running in, <code>dev</code>, <code>test</code> and <code>prod</code>. The <code>prod</code> environment is special because it uses a <a href='https://github.com/edn-format/edn#tagged-elements'>tagged literal</a> and retrieves the configuration values from the environment, either <code>.env</code>, <code>env.edn</code> or the OS.</p><p>This file can and should be checked in but try not to set the production values directly in the file, instead on the production server set these environment variables:</p><pre><code class="bash">DB&#95;NAME=&lt;your database name&gt;
+DB&#95;USERNAME=&lt;if your database is password protected&gt;
+DB&#95;PASSWORD=&lt;if your database is password protected&gt;
+DB&#95;HOST=&lt;typically localhost&gt;
+DB&#95;PORT=&lt;by default for postgres this is 5432&gt;
+</code></pre>

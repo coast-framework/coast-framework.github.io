@@ -1,0 +1,28 @@
+<h1 id="user-content-directory-structure">Directory Structure</h1><ul><li><a href='#user-content-directory-structure'>Directory Structure</a></li></ul><p>The Coast directory structure may feel overwhelming at first glance since there are a handful of pre-configured directories.</p><p>Eventually, you'll understand what is there because of clojure, java or coast itself, but in the mean time it's a decent way to structure web apps with tools.deps</p><p>A standard Coast installation looks something like so:<pre><code class="bash">.
+├── Makefile
+├── README.md
+├── bin
+│   └── repl.clj
+├── db
+│   └── migrations/
+│   └── associations.clj
+├── db.edn
+├── deps.edn
+├── env.edn
+├── resources
+│   ├── assets.edn
+│   └── public
+│       ├── css
+│       │   └── app.css
+│       └── js
+│           └── app.js
+├── src
+│   ├── components.clj
+│   ├── home.clj
+│   ├── routes.clj
+│   └── server.clj
+└── test
+    └── server&#95;test.clj
+</code></pre></p><h2 id="user-content-root-directories">Root Directories</h2><h3 id="user-content-bin">bin</h3><p>The <code>bin</code> directory is the home of the <a href='https://github.com/nrepl/nrepl'>nREPL</a> server.</p><h3 id="user-content-db">db</h3><p>The <code>db</code> directory is used to store all database related files.</p><h3 id="user-content-resources">resources</h3><p>The <code>resources</code> directory is used to serve static assets over HTTP.</p><p>This directory is mapped to the root of your website:</p><pre><code class="clojure">; actual file is stored in /resources/css/app.css
+&#91;:link {:rel &quot;stylesheet&quot; :href &quot;/app.css&quot;}&#93;
+</code></pre><h3 id="user-content-src">src</h3><p>The <code>src</code> directory is used to store <code>components</code> (re-usable bits of html), and your application code, one file for each set of routes.</p><h3 id="user-content-test">test</h3><p>The <code>test</code> directory is used to store all your application tests.</p>

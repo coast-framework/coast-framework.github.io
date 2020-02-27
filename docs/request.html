@@ -1,0 +1,70 @@
+<h1 id="user-content-request">Request</h1><ul><li><a href='#user-content-request-map'>Request Map</a></li><li><a href='#user-content-headers'>Headers</a></li><li><a href='#user-content-content-types'>Content Types</a></li><li><a href='#user-content-method-spoofing'>Method Spoofing</a></li><li><a href='#user-content-extending-request'>Extending Request</a></li></ul><p>This guide outlines how to use the request map to read request data.</p><p>Coast passes the current HTTP request object as part of the <a href='/docs/request-lifecycle.md'>request lifecycle</a> which is sent to all route handlers and middleware:</p><pre><code class="clojure">&#40;defn index &#91;{:keys &#91;params session errors uri request-method&#93; :as request}&#93;&#41;
+</code></pre><p>The example above uses <a href='https://clojure.org/guides/destructuring'>destructuring</a> to assign the keys in the request map to variables of the same name.</p><h2 id="user-content-request-map">Request Map</h2><p>The request map is composed of a number of keys that will help you decided what to do on each request</p><p>There are quite a few ways to retrieve values out of a clojure map, here are a few examples:<pre><code class="clojure">; using clojure's get function
+&#40;get request :params&#41; ; =&gt; {}
+
+; using the keyword itself as a function
+&#40;:params request&#41; ; =&gt; {}
+
+; using destructuring in the function arguments
+&#40;defn index &#91;{:params params}&#93;&#41;
+
+; using :keys destructuring in the function arguments
+&#40;defn index &#91;{:keys &#91;params&#93;}&#93;&#41;
+
+; having the request still be a variable in the current function
+&#40;defn index &#91;{:keys &#91;params&#93; :as request}&#93;
+  &#40;let &#91;session &#40;:session request&#41;&#93;&#41;&#41;
+</code></pre></p><h3 id="user-content-request-body-keys">Request body keys</h3><p>The following list of functions can be used to read any value from the request map.</p><table><thead><tr><th style='text-align:left'>function</th><th style='text-align:left'>description</th></tr></thead><tbody><tr><td style='text-align:left'>:params</td><td style='text-align:left'>Returns a value containing a mix of query params and form params</td></tr><tr><td style='text-align:left'>:body</td><td style='text-align:left'>Returns a value in the case of a json request</td></tr><tr><td style='text-align:left'>:coerced-params</td><td style='text-align:left'>Coast attempts to automatically coerce numbers, booleans and the like</td></tr><tr><td style='text-align:left'>:raw-params</td><td style='text-align:left'>This key holds the value of the params as the http server received them, before coast coerces them</td></tr><tr><td style='text-align:left'>:session</td><td style='text-align:left'>This is set when a person is said to be logged in</td></tr><tr><td style='text-align:left'>:uri</td><td style='text-align:left'>This is the url of the incoming request</td></tr><tr><td style='text-align:left'>:request-method</td><td style='text-align:left'>The simulated method of the incoming request</td></tr><tr><td style='text-align:left'>:original-request-method</td><td style='text-align:left'>The actual method of the incoming request</td></tr><tr><td style='text-align:left'>:errors</td><td style='text-align:left'>This is set by you on form errors</td></tr><tr><td style='text-align:left'>:headers</td><td style='text-align:left'>The request's headers</td></tr></tbody></table><h4 id="user-content-<code>:params</code>"><code>:params</code></h4><p>Returns a value containing a mix of query params and form params</p><pre><code class="clojure">&#40;coast/form-for :todo/change {:todo/id 123}
+  &#91;:input {:type &quot;text&quot; :name &quot;todo/name&quot;}&#93;
+  &#91;:input {:type &quot;text&quot; :name &quot;todo/category&quot;}&#93;&#41;&#41;
+
+  &#91;:input {:type &quot;submit&quot; :value &quot;Submit&quot;}&#93;
+
+; sends your handler function this request map when submitted
+&#40;defn change &#91;request&#93;
+  &#40;let &#91;params &#40;:params request&#41;
+        uri &#40;:uri request&#41;
+        request-method &#40;:request-method request&#41;&#93;
+    &#40;= params {:todo/name &quot;some name&quot; :todo/category &quot;some category&quot; :todo/id 123}&#41;
+    &#40;= uri &quot;/todos/123&quot;&#41;
+    &#40;= request-method :put&#41;&#41;&#41;
+</code></pre><h4 id="user-content-<code>:body</code>"><code>:body</code></h4><p>Returns a value in the case of a json request</p><h4 id="user-content-<code>:coerced-params</code>"><code>:coerced-params</code></h4><p>Coast attempts to automatically coerce numbers, booleans and the like, these are stored here</p><h4 id="user-content-<code>:raw-params</code>"><code>:raw-params</code></h4><p>Coast attempts to intelligently coerce params from strings to ints, floats, decimals, booleans, and sequences.</p><p>This key holds the value of the params as the http server received them.</p><h4 id="user-content-<code>:session</code>"><code>:session</code></h4><p>This is set when a person is said to be logged in</p><pre><code class="clojure">&#40;= request {:session {:id 123 :a-value-you-control &quot;&quot;}}&#41;
+</code></pre><h4 id="user-content-<code>:uri</code>"><code>:uri</code></h4><p>This is the url of the incoming request</p><h4 id="user-content-<code>:request-method</code>"><code>:request-method</code></h4><p>This is the spoofed method of the incoming request. Spoofed methods being either <code>put</code>, <code>patch</code> or <code>delete</code>.</p><h4 id="user-content-<code>:original-request-method</code>"><code>:original-request-method</code></h4><p>This is the method of the incoming request before Coast gets ahold of it</p><h4 id="user-content-<code>:errors</code>"><code>:errors</code></h4><p>This can be set when <code>rescue</code>-ing from any errors, validation errors, app code exceptions, those kinds of things.</p><h2 id="user-content-headers">Headers</h2><p>Headers in coast are string values, not keywords</p><p>So this:</p><pre><code class="http">Accept: application/json
+Content-Type: application/json
+</code></pre><p>Is this in coast:</p><pre><code class="clojure">&#40;defn change &#91;request&#93;
+  &#40;= request {:headers {&quot;Accept&quot; &quot;application/json&quot; &quot;Content-Type&quot; &quot;application/json&quot;}}&#41;&#41;
+</code></pre><h2 id="user-content-content-types">Content Types</h2><p>Web servers don't only serve web pages – they also have to deal with API responses served as <em>JSON</em></p><p>In Coast you can separate json responses and html responses at the router level</p><pre><code class="clojure">; routes.clj
+&#40;def routes
+  &#40;coast/routes
+    &#40;coast/site
+      &#91;:get &quot;/&quot; :home/index&#93;&#41;
+
+    &#40;coast/api
+      &#91;:get &quot;/api&quot; :api.home/index&#93;&#41;&#41;&#41;
+</code></pre><p>This helps Coast not only handle json requests with less checking for json request bodies, it also helps with returning the response as json without specifying json in every single handler function:</p><pre><code class="clojure">&#40;ns api.home
+  &#40;:require &#91;coast&#93;&#41;&#41;
+
+&#40;defn index &#91;request&#93;
+  &#40;coast/ok {:hello &quot;world&quot;}&#41;&#41; ; this will return maps, vectors or anything allowable as json
+</code></pre><p>Feel free to not specify any particular set of route middleware though:</p><pre><code class="clojure">&#40;def routes
+  &#40;coast/routes
+    &#91;:get &quot;/&quot; :home/index&#93;&#41;&#41;
+</code></pre><p>Content negotiation and what should be returned is entirely up to you.</p><h2 id="user-content-method-spoofing">Method spoofing</h2><p>HTML forms are only capable of making <code>GET</code> and <code>POST</code> requests, which means you cannot utilize the REST conventions of other HTTP methods like <code>PUT</code>, <code>PATCH</code> and <code>DELETE</code>.</p><p>Coast makes it simple to bypass the request method by adding a <code>&#95;method</code> input to a form, executing the correct route for you automatically:</p><pre><code class="clojure">; give this route
+&#91;:put &quot;/posts/:post-id&quot; :post/change&#93;
+
+&#40;coast/form {:method :put :action &quot;/posts/:post-id&quot; :post/id 123}&#41;&#41;
+
+; of course you can take this one step further by using coast's form helper
+&#40;let &#91;post {:post/id 123}&#93;
+  &#40;coast/form-for :post/change post&#41;&#41;
+</code></pre><h2 id="user-content-extending-request">Extending Request</h2><p>It is also possible to add your own keys to the <code>request</code> map by calling <code>assoc</code> or <code>merge</code> in a middleware function you define</p><pre><code class="clojure">; src/middleware.clj
+&#40;defn wrap-auth &#91;handler&#93;
+  &#40;fn &#91;request&#93;
+    &#40;if &#40;some? &#40;:session request&#41;&#41;
+      &#40;handler &#40;assoc request :authenticated? true&#41;&#41;
+      &#40;handler request&#41;&#41;&#41;&#41;
+
+; src/server.clj
+&#40;def app &#40;-&gt; &#40;coast/app {:routes routes}&#41;&#41;
+             &#40;wrap-auth&#41;
+</code></pre>

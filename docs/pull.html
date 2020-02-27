@@ -1,0 +1,104 @@
+<h1 id="user-content-pull-syntax">Pull Syntax</h1><ul><li><a href='#user-content-motivation'>Motivation</a></li><li><a href='#user-content-setup'>Setup</a></li><li><a href='#user-content-pull'>Pull</a></li><li><a href='#user-content-pull-many'>Pull Many</a></li><li><a href='#user-content-limit'>Limit</a></li><li><a href='#user-content-order-by'>Order By</a></li></ul><h2 id="user-content-motivation">Motivation</h2><p>Typically in web applications we treat data as if it were tree shaped not table shaped.</p><p>For example, when you join two or more tables together you get "duplicate" data that you then want to group.</p><p>Here's a more concrete example:</p><pre><code class="clojure">&#40;ns your-project
+  &#40;:require &#91;coast&#93;&#41;&#41;
+
+&#40;coast/q '&#91;:select author/screen-name
+                   author/email
+                   post/title
+                   post/body
+           :from author
+           :join post
+           :where &#91;author/id ?author/id&#93;&#93;
+         {:author/id 1}&#41;
+</code></pre><p>The following query mirrors the SQL almost one to one, it generates this SQL</p><pre><code class="sql">select author.screen&#95;name,
+       author.email,
+       post.title,
+       post.body
+from author
+join post on post.author = author.id
+where author.id = ?
+</code></pre><p>Which assuming some data, would output this in your Clojure code</p><pre><code class="clojure">&#91;{:author/screen-name &quot;cody-coast&quot; :author/email &quot;cody@coastonclojure.com&quot; :post/title &quot;First!&quot; :post/body &quot;Post!&quot;}
+ {:author/screen-name &quot;cody-coast&quot; :author/email &quot;cody@coastonclojure.com&quot; :post/title &quot;Second!&quot; :post/body &quot;Post!&quot;}
+ {:author/screen-name &quot;cody-coast&quot; :author/email &quot;cody@coastonclojure.com&quot; :post/title &quot;Third!&quot; :post/body &quot;Post!&quot;}&#93;
+</code></pre><p>It would be nice if there were just one <code>:author/screen-name</code> and one <code>:author/email</code> but a vector of posts, like this:</p><pre><code class="clojure">&#91;{:author/screen-name &quot;cody-coast&quot;
+  :author/email &quot;cody@coastonclojure.com&quot;
+  :author/posts &#91;{:post/title &quot;First&quot;
+                  :post/body &quot;Post!&quot;}
+                 {:post/title &quot;Second!&quot;
+                  :post/body &quot;Post!&quot;}
+                 {:post/title &quot;Third!&quot;
+                  :post/body &quot;Post!&quot;}&#93;}&#93;
+</code></pre><p>Pull syntax is shamelessly stolen from <a href='https://www.datomic.com'>datomic</a> and it solves this problem. You don't even need an ORM to pull it off.</p><h2 id="user-content-setup">Setup</h2><p>Pull requires some information on top of your database's schema to function.</p><p>This information is defined in the <code>db/associations.clj</code> file.</p><p>Here's a quick walk through of defining a database migration with two tables and setting up <code>associations.clj</code></p><pre><code class="clojure">&#40;defn change &#91;&#93;
+  &#40;create-table :author
+    &#40;text :screen-name :unique true :null false&#41;
+    &#40;text :email :unique true :null false&#41;
+    &#40;text :password :null false&#41;
+    &#40;bool :pro :null false :default false&#41;
+    &#40;timestamps&#41;&#41;&#41;
+</code></pre><p>This first migration defines an <code>author</code> table that looks like this:</p><table><thead><tr><th style='text-align:left'>column</th><th style='text-align:left'>type</th></tr></thead><tbody><tr><td style='text-align:left'>id</td><td style='text-align:left'>integer primary key</td></tr><tr><td style='text-align:left'>screen_name</td><td style='text-align:left'>text</td></tr><tr><td style='text-align:left'>email</td><td style='text-align:left'>text</td></tr><tr><td style='text-align:left'>password</td><td style='text-align:left'>text</td></tr><tr><td style='text-align:left'>pro</td><td style='text-align:left'>boolean</td></tr><tr><td style='text-align:left'>updated_at</td><td style='text-align:left'>timestamp</td></tr><tr><td style='text-align:left'>created_at</td><td style='text-align:left'>timestamp</td></tr></tbody></table><p>The second migration defines a <code>post</code> table:</p><pre><code class="clojure">&#40;defn change &#91;&#93;
+  &#40;create-table :post
+    &#40;references :author&#41;
+    &#40;text :title&#41;
+    &#40;text :body&#41;
+    &#40;timestamps&#41;&#41;&#41;
+</code></pre><table><thead><tr><th style='text-align:left'>column</th><th style='text-align:left'>type</th></tr></thead><tbody><tr><td style='text-align:left'>id</td><td style='text-align:left'>integer primary key</td></tr><tr><td style='text-align:left'>author</td><td style='text-align:left'>integer references author(id)</td></tr><tr><td style='text-align:left'>title</td><td style='text-align:left'>text</td></tr><tr><td style='text-align:left'>body</td><td style='text-align:left'>text</td></tr><tr><td style='text-align:left'>updated_at</td><td style='text-align:left'>timestamp</td></tr><tr><td style='text-align:left'>created_at</td><td style='text-align:left'>timestamp</td></tr></tbody></table><p>The last step is to define a relationship between author and post in <code>db/associations.clj</code>:</p><pre><code class="clojure">; db/associations.clj
+
+&#40;ns associations
+  &#40;:require &#91;coast.db.associations :refer &#91;table belongs-to has-many tables&#93;&#93;&#41;&#41;
+
+&#40;defn associations &#91;&#93;
+  &#40;tables
+    &#40;table :author
+      &#40;has-many :posts&#41;&#41;
+
+    &#40;table :post
+      &#40;belongs-to :author&#41;&#41;&#41;&#41;
+</code></pre><p>The way associations works is when querying a database with pull syntax, Coast uses the relationship names, so you can query columns with the <code>qualified keyword</code> syntax of <code>table/name</code>, but you can also query relationships.</p><p>For this particular example, you can now query for posts like this:</p><pre><code class="clojure">{:author/posts &#91;post/id post/title&#93;}
+</code></pre><p>and you can query the other direction like this:</p><pre><code class="clojure">{:post/author &#91;author/screen-name&#93;}
+</code></pre><h2 id="user-content-pull">Pull</h2><p>Pull syntax groups child records into vectors under a name you define.</p><p>Building on the setup section, here is a complete example of a pull query:</p><pre><code class="clojure">&#40;coast/pull '&#91;author/screen-name
+              author/email
+              author/password
+              {:author/posts &#91;post/title
+                              post/body&#93;}&#93;
+            {:author/id 1}&#41;
+</code></pre><p>This will return the following clojure map:</p><pre><code class="clojure">{:author/screen-name &quot;cody-coast&quot;
+ :author/email &quot;cody@coastonclojure.com&quot;
+ :author/posts &#91;{:post/title &quot;First&quot;
+                 :post/body &quot;Post!&quot;}
+                {:post/title &quot;Second!&quot;
+                 :post/body &quot;Post!&quot;}
+                {:post/title &quot;Third!&quot;
+                 :post/body &quot;Post!&quot;}&#93;}
+</code></pre><p>The shape of the query almost looks like the shape of the data returned if you squint and tilt your head a bit.</p><p>Pull queries are a bit different from regular SQL because the relationships themselves are in the query instead of just the <code>join</code> keyword.</p><p>Pull queries work similarly to SQL, you can also pull things without fully specifying all of the columns using an asterisk <code>&#42;</code>:</p><pre><code class="clojure">&#40;coast/pull '&#91;&#42;&#93; {:author/id 1}&#41;
+</code></pre><p>This will recursively pull every column from every table related to <code>author</code>, including the <code>author</code> table itself, until it reaches the end of the relationships defined in <code>db/associations.clj</code>.</p><h2 id="user-content-pull-many">Pull Many</h2><p>This works well for one row with a specified primary key column and value, but what about more arbitrary where clauses?</p><p>Coast has you covered</p><pre><code class="clojure">&#40;coast/q '&#91;:pull author/screen-name
+                 {:author/posts &#91;post/title
+                                 post/body&#93;}
+           :from author
+           :where &#91;pro ?pro&#93;&#93;
+         {:pro true}&#41;
+</code></pre><p class="note">NOTE: When pulling multiple rows from the database, a surrounding vector <code>&#91;&#93;</code> is optional</p><p>The above query might return something like the following:</p><pre><code class="clojure">&#91;{:author/screen-name &quot;cody-coast&quot;
+  :author/posts &#91;{:post/title &quot;First&quot;
+                  :post/body &quot;Post!&quot;}
+                 {:post/title &quot;Second!&quot;
+                  :post/body &quot;Post!&quot;}
+                 {:post/title &quot;Third!&quot;
+                  :post/body &quot;Post!&quot;}&#93;}
+  {:author/screen-name &quot;sean&quot;
+    :author/posts &#91;{:post/title &quot;Coast is the best&quot;
+                    :post/body &quot;Word.&quot;}&#93;}&#93;
+
+</code></pre><p>Catch-all asterisks <code>&#42;</code> work here too:</p><pre><code class="clojure">&#40;coast/q '&#91;:pull &#42;
+           :from author
+           :where &#91;pro ?pro&#93;&#93;
+         {:pro true}&#41;
+</code></pre><h2 id="user-content-limit">Limit</h2><p>Normally pull will keep returning all of the child rows without limit. There is a way to specify a maximum number of rows.</p><pre><code class="clojure">&#40;q '&#91;:pull author/screen-name
+           {&#40;:author/posts :limit 10&#41; &#91;post/title
+                                       post/body&#93;}
+     :from author
+     :where &#91;author/pro ?pro&#93;&#93;
+   {:pro true}&#41;
+</code></pre><p>If you wrap the relationship portion of the query in <code>&#40;&#41;</code> you can pass in <code>:limit</code> and a number.</p><h2 id="user-content-order-by">Order By</h2><p>It's also possible to order the results returned from a pull query as well:</p><pre><code class="clojure">&#40;q '&#91;:pull author/screen-name
+           {&#40;:author/posts :order post/id desc&#41; &#91;post/title
+                                                 post/body&#93;}
+     :where &#91;author/pro ?pro&#93;&#93;
+   {:pro true}&#41;
+</code></pre>

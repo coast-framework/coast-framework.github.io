@@ -1,0 +1,80 @@
+<h1 id="user-content-sessions">Sessions</h1><ul><li><a href='#user-content-supported-stores'>Supported Stores</a></li><li><a href='#user-content-basic-example'>Basic Example</a></li><li><a href='#user-content-flash-messages'>Flash Messages</a></li><li><a href='#user-content-view-logic'>View Logic</a></li><li><a href='#user-content-components'>Components</a></li><li><a href='#user-content-layout'>Layout</a></li><li><a href='#user-content-syntax'>Syntax</a></li></ul><p>Coast has first-class session support with a variety of inbuilt drivers to efficiently manage and store sessions.</p><p>In this guide, we learn how to configure and use these different session drivers.</p><h2 id="user-content-supported-stores">Supported stores</h2><p>Below is the list of stores supported by Coast.</p><p>You can change the current store by adding one to your <code>deps.edn</code> file and specifying it in the <code>app</code> map.</p><p>Note: The <a href='https://github.com/paraseba/rrss'>redis</a> and <a href='https://github.com/luminus-framework/jdbc-ring-session'>jdbc</a> stores are not included with coast by default.</p><table><thead><tr><th style='text-align:left'>Name</th><th style='text-align:left'>Function</th><th style='text-align:left'>Description</th></tr></thead><tbody><tr><td style='text-align:left'>Cookie</td><td style='text-align:left'>cookie-store</td><td style='text-align:left'>The default store used by coast, stores sessions in encrypted cookie</td></tr><tr><td style='text-align:left'>Memory</td><td style='text-align:left'>memory-store</td><td style='text-align:left'>In-memory store, all sessions will be reset on server restart</td></tr><tr><td style='text-align:left'>JDBC</td><td style='text-align:left'>jdbc-store</td><td style='text-align:left'>Stores the sessions in a database table</td></tr><tr><td style='text-align:left'>Redis</td><td style='text-align:left'>redis-store</td><td style='text-align:left'>Stores the sessions in redis</td></tr></tbody></table><h2 id="user-content-basic-example">Basic example</h2><p>The <code>session</code> object is passed as part of the <a href='/docs/request.md'>request map</a></p><p>Here's a quick example of how to use sessions during the HTTP lifecycle:</p><pre><code class="clojure">&#40;ns server
+  &#40;:require &#91;coast&#93;&#41;&#41;
+
+&#40;def app &#40;coast/app {:session {:store &#40;cookie-store {:key &quot;16 byte secret key&quot;}&#41;}}&#41;&#41;
+</code></pre><p>Then later on in a handler function:</p><pre><code class="clojure">&#40;defn index &#91;request&#93;
+  &#40;let &#91;authenticated-person &#40;get-in request &#91;:session :person/id&#93;&#41;&#93;
+    &#40;if &#40;some? authenticated-person&#41;
+      &#91;:h1 &quot;You're logged in!&quot;&#93;
+      &#91;:a {:href &#40;coast/url-for :login&#41;} &quot;Log in here&quot;&#93;&#41;&#41;&#41;
+</code></pre><p>Here's how to set a session after a person signs in or creates an account:</p><pre><code class="clojure">&#40;defn create &#91;request&#93;
+  &#40;-&gt; &#40;coast/redirect-to :after-sign-up&#41;
+      &#40;assoc :session {:person/id 123}&#41;&#41;&#41;
+</code></pre><p>If you don't feel like checking if someone is authenticated in every handler function, feel free to use middleware:</p><pre><code class="clojure">; src/middleware.clj
+
+&#40;defn auth &#91;handler&#93;
+  &#40;fn &#91;request&#93;
+    &#40;let &#91;person &#40;get-in request &#91;:session :person/id&#93;&#41;&#93;
+      &#40;if &#40;some? person&#41;
+        &#40;handler request&#41;
+        &#40;coast/unauthorized &quot;HAL9000: Sorry Dave, I can't let you do that&quot;&#41;&#41;&#41;&#41;&#41;
+</code></pre><p>Then you can wrap the routes that require auth:</p><pre><code class="clojure">; src/routes.clj
+
+&#40;def routes
+  &#40;coast/site
+    &#91;:get &quot;/&quot; :home/index&#93;
+    &#91;:get &quot;/sign-in&quot; :session/build&#93;
+    &#91;:post &quot;/sessions&quot; :sessions/create&#93;
+
+    &#40;coast/with middleware/auth
+      &#91;:get &quot;/dashboard&quot; :home/dashboard&#93;&#41;&#41;&#41;&#41;
+</code></pre><h2 id="user-content-flash-messages">Flash messages</h2><p>Flash messages are short-lived session values for a single request only. They are mainly used for <em>success messages</em>, but can be used for any other purpose.</p><h3 id="user-content-html-form-example">HTML form example</h3><p>Let's say we want to validate submitted user data and redirect back to our form if there aren't any validation errors.</p><p>Start with the following HTML form:</p><pre><code class="clojure">; src/customer.clj
+
+&#40;defn build &#91;request&#93;
+  &#40;coast/form-for ::create
+    &#91;:input {:type &quot;text&quot; :name &quot;customer/email&quot;}&#93;
+    &#91;:button {:type &quot;submit&quot;} &quot;Submit&quot;&#93;&#41;&#41;
+</code></pre><p>Then, add the <code>/customers</code> routes to validate form data:</p><pre><code class="clojure">&#40;def routes
+  &#40;coast/site
+    &#91;:get &quot;/customers/build&quot; :customer/build&#93;
+    &#91;:post &quot;/customers&quot; :customer/create&#93;
+    &#91;:get &quot;/customers/:customer-id&quot; :customer/view&#93;&#41;&#41;
+</code></pre><p>...and implement the handler</p><pre><code class="clojure">; src/customer.clj
+
+&#40;defn create &#91;request&#93;
+  &#40;let &#91;&#91;&#95; errors&#93; &#40;-&gt; &#40;select-keys &#40;:params request&#41; &#91;:customer/email&#93;&#41;
+                       &#40;coast/validate &#91;&#91;:email &#91;:customer/email&#93;&#93;&#93;&#41;
+                       &#40;coast/rescue&#41;&#41;
+    &#40;if &#40;nil? errors&#41;
+      &#40;-&gt; &#40;redirect-to ::view&#41;
+          &#40;flash &quot;Thanks for signing up!&quot;&#41;&#41;
+      &#40;customer/build &#40;merge request errors&#41;&#41;&#41;&#41;&#41;
+</code></pre><p>Finally, write the view handler to show the flash message:</p><pre><code class="clojure">; src/customer.clj
+
+&#40;defn view &#91;request&#93;
+  &#91;:div
+    &#40;when &#40;some? &#40;:flash request&#41;&#41;&#41;&#93;
+      &#40;:flash request&#41;&#41;
+</code></pre><p>Here's the whole <code>customer.clj</code> file just for kicks and giggles:</p><pre><code class="clojure">; src/customer.clj
+
+&#40;defn build &#91;request&#93;
+  &#40;coast/form-for ::create
+    &#91;:input {:type &quot;text&quot; :name &quot;customer/email&quot;}&#93;
+    &#91;:button {:type &quot;submit&quot;} &quot;Submit&quot;&#93;&#41;&#41;
+
+
+&#40;defn create &#91;request&#93;
+  &#40;let &#91;&#91;&#95; errors&#93; &#40;-&gt; &#40;select-keys &#40;:params request&#41; &#91;:customer/email&#93;&#41;
+                       &#40;coast/validate &#91;&#91;:email &#91;:customer/email&#93;&#93;&#93;&#41;
+                       &#40;coast/rescue&#41;&#41;
+    &#40;if &#40;nil? errors&#41;
+      &#40;-&gt; &#40;redirect-to ::view&#41;
+          &#40;flash &quot;Thanks for signing up!&quot;&#41;&#41;
+      &#40;customer/build &#40;merge request errors&#41;&#41;&#41;&#41;&#41;
+
+
+&#40;defn view &#91;request&#93;
+  &#91;:div
+    &#40;when &#40;some? &#40;:flash request&#41;&#41;&#41;&#93;
+      &#40;:flash request&#41;&#41;
+</code></pre>

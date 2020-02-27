@@ -1,0 +1,49 @@
+<h1 id="user-content-response">Response</h1><ul><li><a href='#user-content-basic-example'>Basic Example</a></li><li><a href='#user-content-making-responses'>Making Responses</a></li><li><a href='#user-content-headers'>Headers</a></li><li><a href='#user-content-cookies'>Cookies</a></li><li><a href='#user-content-redirects'>Redirects</a></li><li><a href='#user-content-attachments'>Attachments</a></li><li><a href='#user-content-extending-response'>Extending Response</a></li></ul><p>This guide outlines how to use the response map to respond to incoming requests.</p><p>Coast passes the current HTTP response map as part of the <a href='/docs/request-lifecycle.md'>request-lifecycle</a> which is sent to all route handlers and middleware.</p><pre><code class="clojure">; routes.clj
+&#40;def routes
+  &#40;coast/routes
+    &#91;:get &quot;/&quot; :home/index&#93;&#41;&#41;
+
+; src/home.clj
+&#40;defn index &#91;request&#93;
+  {:status 200 :body &quot;this returns a string&quot;}&#41;
+</code></pre><p>The above example returns a string with a content type of <code>text/plain</code></p><h2 id="user-content-basic-example">Basic Example</h2><p>The following example returns an array of customers in JSON format:</p><pre><code class="clojure">; routes.clj
+&#91;:get &quot;/customers&quot; :customer/index&#93;
+
+; src/customer.clj
+&#40;defn index &#91;request&#93;
+  &#40;let &#91;customers &#91;{:customer/id 1 :customer/name &quot;Sean&quot;}
+                   {:customer/id 2 :customer/name &quot;Johnny&quot;}
+                   {:customer/id 2 :customer/name &quot;Felix&quot;}
+                   {:customer/id 2 :customer/name &quot;Gloria&quot;}&#93;&#93;
+    {:status 200 :body customers :headers {&quot;Content-Type&quot; &quot;application/json&quot;}}&#41;&#41;
+</code></pre><p>The <code>coast/ok</code> function can also be used instead of a map:</p><pre><code class="clojure">&#40;defn index &#91;request&#93;
+  &#40;let &#91;customers &#91;{:customer/id 1 :customer/name &quot;Sean&quot;}
+                   {:customer/id 2 :customer/name &quot;Johnny&quot;}
+                   {:customer/id 2 :customer/name &quot;Felix&quot;}
+                   {:customer/id 2 :customer/name &quot;Gloria&quot;}&#93;&#93;
+    &#40;coast/ok customers :json&#41;&#41;&#41;
+</code></pre><h2 id="user-content-making-responses">Making responses</h2><p>Coast has common functions for the most common http responses:</p><ul><li>ok (200)</li><li>created (201)</li><li>accepted (202)</li><li>no-content (204)</li><li>bad-request (400)</li><li>unauthorized (401)</li><li>not-found (404)</li><li>forbidden (403)</li><li>server-error 500</li></ul><p>They accept either a keyword as the last argument, <code>:html</code> or <code>:json</code>.</p><pre><code class="clojure">&#40;coast/created {:customer/id 1} :json&#41;
+
+&#40;coast/ok &#91;:h1 &quot;hello world&quot;&#93; :html&#41;
+</code></pre><h2 id="user-content-headers">Headers</h2><p>They also accept headers as well:</p><pre><code class="clojure">&#40;coast/created {:customer/id 1} {&quot;Content-Type&quot; &quot;application/json&quot;}&#41;
+
+&#40;coast/ok &#91;:h1 &quot;hello world&quot;&#93; {&quot;Content-Type&quot; &quot;text/html&quot;}&#41;
+</code></pre><p>Coast by default returns <code>{&quot;Content-Type&quot; &quot;application/octet-stream&quot;}</code></p><h2 id="user-content-cookies">Cookies</h2><p>Use the following keys to set/remove response cookies.</p><h4 id="user-content-cookie">cookie</h4><p>Set a cookie value:</p><pre><code class="clojure">{:status 200
+ :body &quot;&quot;
+ :cookies {&quot;cart-total&quot; {:value &quot;20&quot;}}}
+</code></pre><h4 id="user-content-clearing-a-cookie">clearing a cookie</h4><p>Remove an existing cookie value (by setting its expiry in the past):</p><pre><code class="clojure">{:status 200
+ :body &quot;&quot;
+ :cookies {&quot;cart-total&quot; {:expires &#40;coast/time 1 :second/ago&#41;}}}
+</code></pre><p>As well as setting the value of the cookie, you can also set additional keys:</p><p>Shamelessly stolen from the <a href='https://github.com/ring-clojure/ring/wiki/Cookies'>ring docs</a></p><ul><li><code>:domain</code> - restrict the cookie to a specific domain</li><li><code>:path</code> - restrict the cookie to a specific path</li><li><code>:secure</code> - restrict the cookie to HTTPS URLs if true</li><li><code>:http-only</code> - restrict the cookie to HTTP if true (not accessible via e.g. JavaScript)</li><li><code>:max-age</code> - the number of seconds until the cookie expires</li><li><code>:expires</code> - a specific date and time the cookie expires</li><li><code>:same-site</code> - Specify :strict or :lax to determine whether cookies should be sent with cross-site requests</li></ul><h2 id="user-content-redirects">Redirects</h2><p>Use one of the following functions to redirect requests to a different URL.</p><h4 id="user-content-<code>redirect</code>"><code>redirect</code></h4><p>Redirect request to a different url (by default it will set the status as <code>302</code>):</p><pre><code class="clojure">&#40;defn view &#91;request&#93;&#41;
+
+&#40;defn create &#91;request&#93;
+  &#40;coast/redirect &#40;coast/url-for ::view&#41;&#41;&#41;
+</code></pre><p>You can also skip the <code>url-for</code> like so:</p><pre><code class="clojure">&#40;defn create &#91;request&#93;
+  &#40;coast/redirect-to ::view&#41;&#41;
+</code></pre><p>Or you can redirect to any url:</p><pre><code class="clojure">&#40;coast/redirect &quot;https://coastonclojure.com&quot;&#41;
+</code></pre><h4 id="user-content-<code>flash</code>"><code>flash</code></h4><p>Coast also has a handy flash function which will append a value to the next request after the redirect:</p><pre><code class="clojure">&#40;-&gt; &#40;coast/redirect-to ::view&#41;
+    &#40;coast/flash &quot;Item created successfully!&quot;&#41;&#41;
+</code></pre><p>This flash value now resides in the next function's request map under the <code>:flash</code> key</p><h2 id="user-content-extending-response">Extending Response</h2><p>It is also possible to extend the <code>response</code> map by adding your own keys:</p><pre><code class="clojure">&#40;defn index &#91;request&#93;&#41;
+  &#40;-&gt; &#40;coast/ok &quot;Annie are you ok, are you ok, Annie?&quot;&#41;
+      &#40;assoc :my-custom-key-for-my-custom-middleware &quot;hello&quot;&#41;
+</code></pre>

@@ -1,0 +1,19 @@
+<h1 id="user-content-csrf-protection">CSRF Protection</h1><ul><li><a href='#user-content-how-it-works'>How it works</a></li><li><a href='#user-content-components'>Components</a></li></ul><p>Cross-Site Request Forgery (CSRF) allows an attacker to perform actions on behalf of another person without their knowledge or permission.</p><p>Coast protects your application from CSRF attacks by denying unidentified requests. HTTP requests with <em>POST, PUT and DELETE</em> methods are checked to make sure that the right people from the right place invoke these requests.</p><h2 id="user-content-how-it-works">How It Works</h2><ol><li>Coast creates a <em>CSRF secret</em> for each request on your site.</li><li>A corresponding token for the secret is generated for each request and passed to all <code>form</code> and <code>form-for</code> functions in the <code>csrf</code> and <code>&#42;anti-forgery-token&#42;</code> bindings</li><li>Whenever a <em>POST</em>, <em>PUT</em> or <em>DELETE</em> request is made, the middleware verifies the token with the secret to make sure it is valid.</li></ol><h2 id="user-content-components">Components</h2><p>Coast makes three components available for easy CSRF integration</p><p>A hidden input with the csrf token:</p><h4 id="user-content-<code>csrf</code>"><code>csrf</code></h4><pre><code class="clojure">&#40;ns some-ns
+  &#40;:require &#91;coast&#93;&#41;&#41;
+
+&#91;:form {:action &quot;/&quot; :method :post}
+  &#40;coast/csrf&#41;&#93;
+</code></pre><p>A form with the hidden input already added to the body:</p><h4 id="user-content-<code>form</code>"><code>form</code></h4><pre><code class="clojure">&#40;ns some-ns
+  &#40;:require &#91;coast&#93;&#41;&#41;
+
+&#40;coast/form {:action &quot;/&quot; :method :post}&#41; ; already includes the `csrf` part
+</code></pre><p>And finally a form that includes the csrf hidden input in the body, and also takes a route handler name instead of a map:</p><pre><code class="clojure">; example routes
+&#91;:post &quot;/customers&quot; :customer/create&#93;
+&#91;:put &quot;/customers/:customer-id&quot; :customer/change&#93;
+
+&#40;coast/form-for :customer/create&#41;
+  ; ... inputs go here
+
+&#40;coast/form-for :customer/change {:customer/id 123}&#41;
+  ; ... inputs go here
+</code></pre><p>Coast was designed to ensure you don't have to think about low-level details of web applications like CSRF protection but it's always nice to know what's going on under the hood.</p>
